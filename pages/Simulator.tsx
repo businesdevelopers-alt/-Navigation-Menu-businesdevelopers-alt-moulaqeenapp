@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Play, Pause, RotateCcw, Send, Terminal, Battery, Thermometer, Activity, Bot, Sparkles, FileCode, Loader2, Wrench, Cpu, Zap, ArrowUp, ArrowDown, ArrowLeft, ArrowRight, Package, X, Flag, Trophy, AlertTriangle, ChevronsRight, Plus, MessageSquare, HelpCircle, Trash2, Wand2, Copy } from 'lucide-react';
+import { Play, Pause, RotateCcw, Send, Terminal, Battery, Thermometer, Activity, Bot, Sparkles, FileCode, Loader2, Wrench, Cpu, Zap, ArrowUp, ArrowDown, ArrowLeft, ArrowRight, Package, X, Flag, Trophy, AlertTriangle, ChevronsRight, Plus, MessageSquare, HelpCircle, Trash2, Wand2, Copy, LayoutDashboard } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { SimulationEngine } from '../services/simulationEngine';
 import { streamAssistantHelp, translateCommands } from '../services/geminiService';
 import { RobotState, RobotSchema, ComponentSchema } from '../types';
@@ -462,29 +463,36 @@ const Simulator: React.FC = () => {
                         <span className="text-[10px] text-gray-400">الإحداثيات: {robotState.x}, {robotState.y}</span>
                     </div>
                  </div>
-                 <div className="flex gap-4 text-xs font-mono">
-                    <div className="flex flex-col bg-black/30 px-3 py-1.5 rounded-lg border border-white/5 min-w-[110px]">
-                       <div className="flex items-center justify-between mb-1">
-                           <div className="flex items-center gap-1">
-                               <Battery size={12} className={batteryLevel < 20 ? 'text-red-500 animate-pulse' : 'text-gray-400'} />
-                               <span className="text-[10px] text-gray-400">طاقة</span>
-                           </div>
-                           <span className={`text-[10px] font-bold ${batteryLevel < 20 ? 'text-red-500' : 'text-white'}`}>{Math.round(batteryLevel)}%</span>
-                       </div>
-                       <div className="w-full h-1.5 bg-white/10 rounded-full overflow-hidden">
-                           <div 
-                               className={`h-full transition-all duration-500 ${
-                                   batteryLevel < 20 ? 'bg-red-500' : 
-                                   batteryLevel <= 50 ? 'bg-yellow-500' : 
-                                   'bg-green-500'
-                               }`} 
-                               style={{ width: `${Math.max(0, Math.min(100, batteryLevel))}%` }}
-                           ></div>
-                       </div>
-                    </div>
-                    <div className="flex items-center gap-2 bg-black/30 px-3 py-1.5 rounded-lg border border-white/5">
-                       <Thermometer size={14} className="text-orange-500" />
-                       <span className="text-white">{Math.round(temperature)}°C</span>
+                 <div className="flex gap-4 items-center">
+                    <Link to="/profile" className="hidden sm:flex items-center gap-2 px-3 py-1.5 bg-white/5 hover:bg-white/10 rounded-lg text-xs font-bold text-gray-300 border border-white/5 transition">
+                        <LayoutDashboard size={14} />
+                        لوحة التحكم
+                    </Link>
+                    <div className="h-4 w-px bg-white/10 hidden sm:block"></div>
+                    <div className="flex gap-4 text-xs font-mono">
+                        <div className="flex flex-col bg-black/30 px-3 py-1.5 rounded-lg border border-white/5 min-w-[110px]">
+                        <div className="flex items-center justify-between mb-1">
+                            <div className="flex items-center gap-1">
+                                <Battery size={12} className={batteryLevel < 20 ? 'text-red-500 animate-pulse' : 'text-gray-400'} />
+                                <span className="text-[10px] text-gray-400">طاقة</span>
+                            </div>
+                            <span className={`text-[10px] font-bold ${batteryLevel < 20 ? 'text-red-500' : 'text-white'}`}>{Math.round(batteryLevel)}%</span>
+                        </div>
+                        <div className="w-full h-1.5 bg-white/10 rounded-full overflow-hidden">
+                            <div 
+                                className={`h-full transition-all duration-500 ${
+                                    batteryLevel < 20 ? 'bg-red-500' : 
+                                    batteryLevel <= 50 ? 'bg-yellow-500' : 
+                                    'bg-green-500'
+                                }`} 
+                                style={{ width: `${Math.max(0, Math.min(100, batteryLevel))}%` }}
+                            ></div>
+                        </div>
+                        </div>
+                        <div className="flex items-center gap-2 bg-black/30 px-3 py-1.5 rounded-lg border border-white/5">
+                        <Thermometer size={14} className="text-orange-500" />
+                        <span className="text-white">{Math.round(temperature)}°C</span>
+                        </div>
                     </div>
                  </div>
               </div>

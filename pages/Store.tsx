@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { ShoppingCart, Search, Filter, X, DollarSign, Eye, Check, Zap, Cpu, Settings, Star, ArrowRight, Package, Heart, ImageOff, Plus, ShoppingBag } from 'lucide-react';
+import { ShoppingCart, Search, Filter, X, DollarSign, Eye, Check, Zap, Cpu, Settings, Star, ArrowRight, Package, Heart, ImageOff, Plus, ShoppingBag, Wand2, RefreshCw } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { GoogleGenAI } from "@google/genai";
 import { useCart } from '../context/CartContext';
 import { PRODUCTS } from '../data/products';
 import { Product } from '../types';
@@ -21,10 +22,55 @@ const Store: React.FC = () => {
   
   // Image Loading State
   const [loadedImages, setLoadedImages] = useState<{[key:string]: boolean}>({});
+  const [failedImages, setFailedImages] = useState<{[key:string]: boolean}>({});
+  const [generatedImages, setGeneratedImages] = useState<{[key:string]: string}>({});
+  const [generatingIds, setGeneratingIds] = useState<{[key:string]: boolean}>({});
 
   const handleImageLoad = (id: string) => {
     setLoadedImages(prev => ({...prev, [id]: true}));
   };
+
+  const handleGenerateImage = async (e: React.MouseEvent, product: Product) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    setGeneratingIds(prev => ({...prev, [product.id]: true}));
+    
+    try {
+        const ai = new GoogleGenAI({ apiKey: process.env.API_KEY || '' });
+        const response = await ai.models.generateContent({
+            model: 'gemini-2.5-flash-image',
+            contents: {
+                parts: [{ text: `Professional product photography of ${product.name}, ${product.description}. High tech, clean, robotic component, studio lighting, isolated on dark grey background, photorealistic, 4k.` }]
+            },
+            config: {
+                imageConfig: { aspectRatio: "1:1" }
+            }
+        });
+
+        // Extract image
+        let imageUrl = '';
+        if (response.candidates?.[0]?.content?.parts) {
+            for (const part of response.candidates[0].content.parts) {
+                if (part.inlineData) {
+                    const base64String = part.inlineData.data;
+                    imageUrl = `data:image/png;base64,${base64String}`;
+                    break;
+                }
+            }
+        }
+
+        if (imageUrl) {
+            setGeneratedImages(prev => ({...prev, [product.id]: imageUrl}));
+            setFailedImages(prev => ({...prev, [product.id]: false})); 
+        }
+
+    } catch (error) {
+        console.error("Failed to generate image", error);
+    } finally {
+        setGeneratingIds(prev => ({...prev, [product.id]: false}));
+    }
+  }
 
   const filteredProducts = PRODUCTS.filter(product => {
     const matchesSearch = product.name.toLowerCase().includes(searchTerm.trim().toLowerCase());
@@ -190,29 +236,34 @@ const Store: React.FC = () => {
           <div className="flex-1">
             {filteredProducts.length > 0 ? (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                {filteredProducts.map((product) => (
+                {filteredProducts.map((product) => {
+                  const hasImage = (product.image && product.image.trim() !== '') && !failedImages[product.id];
+                  const displayImage = generatedImages[product.id] || (hasImage ? product.image : PLACEHOLDER_IMAGE);
+                  const showGenerateButton = (!hasImage && !generatedImages[product.id]) || failedImages[product.id];
+
+                  return (
                   <div key={product.id} className="group relative bg-[#0F1216] rounded-2xl border border-white/10 overflow-hidden transition-all duration-500 hover:border-accent/40 hover:shadow-2xl hover:shadow-accent/5 flex flex-col h-full hover:-translate-y-1">
                     
                     {/* Image Area */}
                     <div className="relative h-60 overflow-hidden bg-[#1A1E24] group-hover:bg-[#1f242b] transition-colors">
                         
-                        {!loadedImages[product.id] && (
+                        {!loadedImages[product.id] && !generatedImages[product.id] && !failedImages[product.id] && (
                             <div className="absolute inset-0 bg-white/5 animate-pulse z-10 flex items-center justify-center">
                                 <ImageOff size={24} className="text-white/20" />
                             </div>
                         )}
                         <img 
-                            src={product.image && product.image.trim() !== '' ? product.image : PLACEHOLDER_IMAGE} 
+                            src={displayImage} 
                             alt={product.name} 
                             onLoad={() => handleImageLoad(product.id)}
                             onError={(e) => {
-                                const target = e.target as HTMLImageElement;
-                                if (target.src !== PLACEHOLDER_IMAGE) {
-                                    target.src = PLACEHOLDER_IMAGE;
+                                if (!failedImages[product.id] && !generatedImages[product.id]) {
+                                    setFailedImages(prev => ({...prev, [product.id]: true}));
                                 }
-                                handleImageLoad(product.id);
                             }}
-                            className={`relative z-10 w-full h-full object-cover transition-transform duration-700 ease-out group-hover:scale-110 opacity-90 group-hover:opacity-100 ${loadedImages[product.id] ? 'opacity-100' : 'opacity-0'}`}
+                            className={`relative z-10 w-full h-full object-cover transition-transform duration-700 ease-out group-hover:scale-110 opacity-90 group-hover:opacity-100 
+                                ${loadedImages[product.id] || generatedImages[product.id] ? 'opacity-100' : 'opacity-0'}
+                            `}
                         />
                         {/* Gradient Overlay for Text Readability */}
                         <div className="absolute inset-0 bg-gradient-to-t from-[#0F1216] via-[#0F1216]/20 to-transparent opacity-80 z-20" />
@@ -220,6 +271,22 @@ const Store: React.FC = () => {
                         {/* Technical Corners */}
                         <div className="absolute top-3 left-3 w-4 h-4 border-t border-l border-white/30 z-20"></div>
                         <div className="absolute top-3 right-3 w-4 h-4 border-t border-r border-white/30 z-20"></div>
+
+                        {/* Generation Overlay */}
+                        {showGenerateButton && (
+                           <div className="absolute inset-0 bg-black/60 flex flex-col items-center justify-center z-30 backdrop-blur-sm p-4 text-center animate-in fade-in">
+                               <ImageOff className="text-gray-500 mb-2" size={24} />
+                               <p className="text-xs text-gray-400 mb-3">الصورة غير متوفرة</p>
+                               <button 
+                                  onClick={(e) => handleGenerateImage(e, product)}
+                                  disabled={generatingIds[product.id]}
+                                  className="bg-accent hover:bg-accentHover text-white px-4 py-2 rounded-lg text-xs font-bold flex items-center gap-2 transition disabled:opacity-50 shadow-lg"
+                               >
+                                  {generatingIds[product.id] ? <RefreshCw className="animate-spin" size={14} /> : <Wand2 size={14} />}
+                                  توليد صورة بالذكاء الاصطناعي
+                               </button>
+                           </div>
+                        )}
 
                         {/* Floating Quick Actions (Slide up on hover) */}
                         <div className="absolute inset-x-0 bottom-0 z-30 p-4 translate-y-full group-hover:translate-y-0 transition-transform duration-300 flex items-center justify-center gap-3">
@@ -281,7 +348,7 @@ const Store: React.FC = () => {
                              <div className="flex flex-col">
                                 <div className="flex items-baseline gap-1">
                                     <span className="text-lg font-bold text-white font-mono tracking-tight group-hover:text-highlight transition-colors">{product.price}</span>
-                                    <span className="text-[10px] text-gray-400 font-bold">ر.س</span>
+                                    <span className="text--[10px] text-gray-400 font-bold">ر.س</span>
                                 </div>
                              </div>
                              
@@ -298,7 +365,7 @@ const Store: React.FC = () => {
                         </div>
                     </div>
                   </div>
-                ))}
+                )})}
               </div>
             ) : (
               <div className="flex flex-col items-center justify-center py-20 bg-secondary/30 border border-white/5 rounded-2xl text-center border-dashed">
@@ -336,13 +403,12 @@ const Store: React.FC = () => {
                   {/* Image Side */}
                   <div className="w-full md:w-1/2 relative bg-black group">
                        <img 
-                          src={quickViewProduct.image && quickViewProduct.image.trim() !== '' ? quickViewProduct.image : PLACEHOLDER_IMAGE} 
+                          src={generatedImages[quickViewProduct.id] || (quickViewProduct.image && quickViewProduct.image.trim() !== '' && !failedImages[quickViewProduct.id] ? quickViewProduct.image : PLACEHOLDER_IMAGE)} 
                           alt={quickViewProduct.name} 
                           onError={(e) => {
-                            const target = e.target as HTMLImageElement;
-                            if (target.src !== PLACEHOLDER_IMAGE) {
-                                target.src = PLACEHOLDER_IMAGE;
-                            }
+                             // Fallback in modal as well
+                             const target = e.target as HTMLImageElement;
+                             if (target.src !== PLACEHOLDER_IMAGE) target.src = PLACEHOLDER_IMAGE;
                           }}
                           className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity duration-500"
                        />
