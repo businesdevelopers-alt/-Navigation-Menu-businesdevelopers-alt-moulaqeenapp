@@ -77,17 +77,17 @@ const Home: React.FC = () => {
           <div className="opacity-0 animate-hero delay-300 flex flex-col sm:flex-row gap-5 justify-center items-center mb-10 w-full sm:w-auto">
             <Link
               to="/simulator"
-              className="w-full sm:w-auto inline-flex items-center justify-center px-10 py-4 text-base font-bold text-white bg-accent hover:bg-accentHover rounded-lg transition-all duration-200 shadow-[0_0_20px_rgba(45,137,229,0.15)] hover:-translate-y-0.5 hover:shadow-[0_0_25px_rgba(45,137,229,0.25)]"
+              className="w-full sm:w-auto inline-flex items-center justify-center px-8 py-4 text-base font-bold text-white bg-accent hover:bg-accentHover rounded-xl transition-all duration-300 shadow-[0_0_20px_rgba(45,137,229,0.3)] hover:shadow-[0_0_35px_rgba(45,137,229,0.5)] hover:-translate-y-1"
             >
-              <Terminal className="ml-2" size={18} />
+              <Terminal className="ml-2" size={20} />
               ابدأ المحاكاة مجانًا
             </Link>
             <Link
               to="/courses"
-              className="w-full sm:w-auto inline-flex items-center justify-center px-10 py-4 text-base font-bold text-gray-300 border border-white/10 hover:border-white/30 hover:text-white rounded-lg transition-all duration-200 bg-transparent"
+              className="w-full sm:w-auto inline-flex items-center justify-center px-8 py-4 text-base font-bold text-white bg-white/5 border border-white/10 hover:bg-white/10 hover:border-white/20 rounded-xl transition-all duration-300 backdrop-blur-sm"
             >
-              <PlayCircle className="ml-2" size={18} />
-              شاهد عرض 60 ثانية
+              <PlayCircle className="ml-2" size={20} />
+              تصفح الدورات
             </Link>
           </div>
 

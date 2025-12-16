@@ -92,11 +92,11 @@ const Navbar: React.FC = () => {
                      </Link>
                    </div>
                 ) : (
-                   <Link to="/login" className="text-sm font-medium text-white/70 hover:text-white transition-colors">تسجيل الدخول</Link>
+                   <Link to="/login" className="text-sm font-bold text-white/70 hover:text-white transition-colors">تسجيل الدخول</Link>
                 )}
                 
                 {!user && (
-                   <Link to="/register" className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-sm font-semibold shadow-sm transition-all hover:scale-[1.02] active:scale-[0.98]">
+                   <Link to="/register" className="px-5 py-2.5 rounded-xl bg-accent hover:bg-accentHover text-white text-sm font-bold shadow-lg shadow-accent/20 transition-all hover:scale-105 active:scale-95">
                     ابدأ الآن
                    </Link>
                 )}
@@ -113,7 +113,7 @@ const Navbar: React.FC = () => {
                     )}
                 </Link>
                 {!user && (
-                  <Link to="/register" className="px-3 py-2 rounded-xl bg-blue-600 text-white text-xs font-semibold">
+                  <Link to="/register" className="px-4 py-2 rounded-xl bg-accent text-white text-xs font-bold shadow-md shadow-accent/20">
                     ابدأ الآن
                   </Link>
                 )}
@@ -183,10 +183,10 @@ const Navbar: React.FC = () => {
                    </>
                 ) : (
                   <>
-                    <Link to="/login" onClick={() => setIsMobileMenuOpen(false)} className="block px-4 py-3 text-white/80 hover:text-white transition-colors text-center font-medium">
+                    <Link to="/login" onClick={() => setIsMobileMenuOpen(false)} className="block px-4 py-3 text-white/80 hover:text-white transition-colors text-center font-bold">
                        تسجيل الدخول
                     </Link>
-                    <Link to="/register" onClick={() => setIsMobileMenuOpen(false)} className="block w-full px-4 py-3 rounded-xl bg-blue-600 text-white font-semibold text-center shadow-lg">
+                    <Link to="/register" onClick={() => setIsMobileMenuOpen(false)} className="block w-full px-4 py-3 rounded-xl bg-accent text-white font-bold text-center shadow-lg shadow-accent/20 hover:bg-accentHover transition-colors">
                       ابدأ الآن
                     </Link>
                   </>

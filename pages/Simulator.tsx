@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Play, Pause, RotateCcw, Send, Terminal, Battery, Thermometer, Activity, Bot, Sparkles, FileCode, Loader2, Wrench, Cpu, Zap, ArrowUp, ArrowDown, ArrowLeft, ArrowRight, Package, X, Flag, Trophy, AlertTriangle, ChevronsRight, Plus, MessageSquare, HelpCircle, Trash2, Wand2, Copy, LayoutDashboard } from 'lucide-react';
+import { Play, Pause, RotateCcw, Send, Terminal, Battery, Thermometer, Activity, Bot, Sparkles, FileCode, Loader2, Wrench, Cpu, Zap, ArrowUp, ArrowDown, ArrowLeft, ArrowRight, Package, X, Flag, Trophy, AlertTriangle, ChevronsRight, Plus, MessageSquare, HelpCircle, Trash2, Wand2, Copy, LayoutDashboard, MousePointer2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { SimulationEngine } from '../services/simulationEngine';
 import { streamAssistantHelp, translateCommands } from '../services/geminiService';
@@ -326,6 +326,18 @@ const Simulator: React.FC = () => {
       handleChatSubmit(undefined, prompt);
   };
 
+  // Helper to get action icon
+  const getActionIcon = (cmd: string) => {
+    switch(cmd) {
+        case 'FORWARD': return <ArrowUp size={14} />;
+        case 'BACKWARD': return <ArrowDown size={14} />;
+        case 'TURN_RIGHT': return <ArrowRight size={14} />;
+        case 'TURN_LEFT': return <ArrowLeft size={14} />;
+        case 'WAIT': return <Pause size={14} />;
+        default: return <Activity size={14} />;
+    }
+  };
+
   // Simple Markdown Parser for Code Blocks
   const renderMessageText = (text: string) => {
     const parts = text.split(/(```[\s\S]*?```)/g);
@@ -457,10 +469,17 @@ const Simulator: React.FC = () => {
               {/* Header */}
               <div className="flex items-center justify-between bg-secondary p-4 rounded-xl border border-white/10 shadow-lg">
                  <div className="flex items-center gap-3">
-                    <Activity className="text-accent" />
+                    <div className={`p-2 rounded-lg ${isRunning ? 'bg-green-500/10 text-green-400 border border-green-500/20' : 'bg-white/5 text-gray-400 border border-white/5'}`}>
+                        {isRunning ? <Activity className="animate-pulse" size={20} /> : <Activity size={20} />}
+                    </div>
                     <div>
-                        <h2 className="text-white font-bold leading-none">مهمة: الوصول للعلم</h2>
-                        <span className="text-[10px] text-gray-400">الإحداثيات: {robotState.x}, {robotState.y}</span>
+                        <h2 className="text-white font-bold leading-none mb-1">مهمة: الوصول للعلم</h2>
+                        <div className="flex items-center gap-2">
+                             <span className="text-[10px] text-gray-400 font-mono">X:{robotState.x}, Y:{robotState.y}</span>
+                             <span className={`text-[10px] px-1.5 rounded uppercase font-bold ${isRunning ? 'bg-green-500 text-black' : 'bg-gray-700 text-gray-300'}`}>
+                                {isRunning ? 'Running' : 'Idle'}
+                             </span>
+                        </div>
                     </div>
                  </div>
                  <div className="flex gap-4 items-center">
@@ -498,7 +517,7 @@ const Simulator: React.FC = () => {
               </div>
 
               {/* Grid Container */}
-              <div className="flex-1 bg-[#0F1216] rounded-xl border border-white/10 p-6 relative overflow-hidden flex items-center justify-center shadow-inner">
+              <div className="flex-1 bg-[#0F1216] rounded-xl border border-white/10 p-6 relative overflow-hidden flex items-center justify-center shadow-inner group">
                  <div className="relative aspect-square h-full max-h-[500px] w-full max-w-[500px]">
                     {/* Grid Background */}
                     <div className="absolute inset-0 grid grid-cols-10 grid-rows-10 gap-1">
@@ -507,25 +526,32 @@ const Simulator: React.FC = () => {
 
                     {/* Robot Layer - Absolute Positioning for Smooth Transition */}
                     <div 
-                        className="absolute w-[10%] h-[10%] flex items-center justify-center transition-all duration-500 ease-in-out z-20"
+                        className="absolute w-[10%] h-[10%] flex items-center justify-center transition-all duration-[800ms] ease-[cubic-bezier(0.25,1,0.5,1)] z-20"
                         style={{
                             left: `${robotState.x * 10}%`,
                             top: `${robotState.y * 10}%`,
-                            transform: `rotate(${robotState.direction}deg)` // Assumes 0 is Up, 90 is Right
+                            transform: `rotate(${robotState.direction}deg) scale(${isRunning ? 1.05 : 1})`
                         }}
                     >
-                         {/* Visual Feedback Bubble */}
+                         {/* Visual Feedback Bubble - Improved */}
                         {currentAction && (
-                            <div className="absolute -top-8 left-1/2 -translate-x-1/2 bg-accent text-white text-[10px] font-bold px-2 py-1 rounded-full shadow-lg whitespace-nowrap animate-in fade-in zoom-in duration-200 z-30 border border-white/20">
-                                {currentAction}
+                            <div className="absolute -top-12 left-1/2 -translate-x-1/2 bg-accent text-white px-3 py-1.5 rounded-lg shadow-[0_4px_15px_rgba(0,0,0,0.5)] whitespace-nowrap animate-in fade-in slide-in-from-bottom-2 duration-300 z-30 border border-white/20 flex items-center gap-2 transform -rotate-[${robotState.direction}deg]" style={{ transform: `rotate(-${robotState.direction}deg)` }}>
+                                {getActionIcon(currentAction)}
+                                <span className="text-[10px] font-bold font-mono tracking-wide">{currentAction}</span>
+                                <div className="absolute bottom-[-6px] left-1/2 -translate-x-1/2 w-3 h-3 bg-accent rotate-45 border-r border-b border-white/20"></div>
                             </div>
                         )}
 
-                        <div className={`filter drop-shadow-[0_0_8px_rgba(45,137,229,0.5)] ${missionStatus === 'crash' ? 'text-red-500 animate-shake' : 'text-accent'}`}>
+                        {/* Thruster/Glow Effect */}
+                        {isRunning && (
+                             <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full h-full bg-accent/30 rounded-full blur-xl animate-pulse"></div>
+                        )}
+
+                        <div className={`filter drop-shadow-[0_0_8px_rgba(45,137,229,0.5)] transition-colors duration-300 ${missionStatus === 'crash' ? 'text-red-500 animate-shake' : 'text-accent'}`}>
                             <Bot size={36} strokeWidth={1.5} />
                         </div>
                         {/* Head Light - Always relative to robot direction */}
-                        <div className="absolute -top-1 w-1 h-1 bg-white rounded-full shadow-[0_0_5px_white]"></div>
+                        <div className="absolute -top-1 w-1.5 h-1.5 bg-white rounded-full shadow-[0_0_8px_white]"></div>
                     </div>
                  </div>
 
@@ -625,34 +651,65 @@ const Simulator: React.FC = () => {
                 {/* EDITOR TAB */}
                 {activeTab === 'editor' && (
                    <>
-                     {/* Quick Actions Toolbar */}
-                     <div className="bg-[#15191e] border-b border-white/5 p-2 flex gap-2 overflow-x-auto no-scrollbar">
-                        {[
-                            { label: 'أمام', cmd: 'FORWARD', icon: ArrowUp },
-                            { label: 'خلف', cmd: 'BACKWARD', icon: ArrowDown },
-                            { label: 'يمين', cmd: 'TURN_RIGHT', icon: ArrowRight },
-                            { label: 'يسار', cmd: 'TURN_LEFT', icon: ArrowLeft },
-                            { label: 'انتظر', cmd: 'WAIT', icon: Pause },
-                        ].map((action, idx) => (
+                     {/* Control Panel - Improved Accessibility */}
+                     <div className="bg-[#15191e] border-b border-white/5 p-4 space-y-3">
+                        <div className="flex items-center justify-between">
+                            <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider flex items-center gap-1">
+                                <MousePointer2 size={12} />
+                                إدراج سريع
+                            </h3>
                             <button 
-                                key={idx}
-                                onClick={() => insertCommand(action.cmd)}
-                                className="px-3 py-1.5 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg text-xs text-gray-300 hover:text-white flex items-center gap-1.5 transition whitespace-nowrap"
+                                onClick={() => setShowAiInput(!showAiInput)}
+                                className={`px-2 py-1 rounded-md text-[10px] flex items-center gap-1.5 transition whitespace-nowrap font-bold border border-transparent
+                                    ${showAiInput ? 'bg-purple-600 text-white shadow-lg' : 'bg-purple-500/10 text-purple-400 border-purple-500/20 hover:bg-purple-500/20'}
+                                `}
                             >
-                                <action.icon size={12} />
-                                {action.label}
+                                <Sparkles size={10} />
+                                AI Assistant
                             </button>
-                        ))}
-                        <div className="w-px h-6 bg-white/10 mx-1"></div>
-                        <button 
-                            onClick={() => setShowAiInput(!showAiInput)}
-                            className={`px-3 py-1.5 border border-transparent rounded-lg text-xs flex items-center gap-1.5 transition whitespace-nowrap font-bold
-                                ${showAiInput ? 'bg-purple-600 text-white shadow-lg shadow-purple-900/40' : 'text-purple-400 hover:bg-purple-500/10'}
-                            `}
-                        >
-                            <Sparkles size={12} />
-                            توليد ذكي
-                        </button>
+                        </div>
+                        
+                        <div className="grid grid-cols-2 gap-2">
+                             <div className="grid grid-cols-2 gap-2">
+                                <button 
+                                    onClick={() => insertCommand('FORWARD')}
+                                    className="px-3 py-2 bg-green-500/10 hover:bg-green-500/20 border border-green-500/20 rounded-lg text-xs font-bold text-green-400 flex items-center justify-center gap-1.5 transition"
+                                >
+                                    <ArrowUp size={14} />
+                                    أمام
+                                </button>
+                                <button 
+                                    onClick={() => insertCommand('BACKWARD')}
+                                    className="px-3 py-2 bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 rounded-lg text-xs font-bold text-red-400 flex items-center justify-center gap-1.5 transition"
+                                >
+                                    <ArrowDown size={14} />
+                                    خلف
+                                </button>
+                             </div>
+                             <div className="grid grid-cols-3 gap-2">
+                                <button 
+                                    onClick={() => insertCommand('TURN_RIGHT')}
+                                    className="px-2 py-2 bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/20 rounded-lg text-xs font-bold text-blue-400 flex items-center justify-center gap-1 transition"
+                                    title="يمين"
+                                >
+                                    <ArrowRight size={14} />
+                                </button>
+                                <button 
+                                    onClick={() => insertCommand('TURN_LEFT')}
+                                    className="px-2 py-2 bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/20 rounded-lg text-xs font-bold text-blue-400 flex items-center justify-center gap-1 transition"
+                                    title="يسار"
+                                >
+                                    <ArrowLeft size={14} />
+                                </button>
+                                <button 
+                                    onClick={() => insertCommand('WAIT')}
+                                    className="px-2 py-2 bg-yellow-500/10 hover:bg-yellow-500/20 border border-yellow-500/20 rounded-lg text-xs font-bold text-yellow-400 flex items-center justify-center gap-1 transition"
+                                    title="انتظار"
+                                >
+                                    <Pause size={14} />
+                                </button>
+                             </div>
+                        </div>
                      </div>
 
                      {/* AI Input */}
@@ -687,13 +744,18 @@ const Simulator: React.FC = () => {
                         </div>
                      )}
 
-                     <textarea 
-                        ref={textareaRef}
-                        value={code}
-                        onChange={(e) => setCode(e.target.value)}
-                        className="flex-1 bg-[#0d1117] text-gray-300 p-4 font-mono text-sm resize-none focus:outline-none leading-relaxed custom-scrollbar selection:bg-accent/30"
-                        spellCheck={false}
-                     />
+                     <div className="relative flex-1">
+                        <textarea 
+                            ref={textareaRef}
+                            value={code}
+                            onChange={(e) => setCode(e.target.value)}
+                            className="w-full h-full bg-[#0d1117] text-gray-300 p-4 font-mono text-sm resize-none focus:outline-none leading-relaxed custom-scrollbar selection:bg-accent/30"
+                            spellCheck={false}
+                        />
+                        <div className="absolute top-2 right-2 px-2 py-1 bg-white/5 rounded text-[10px] text-gray-500 font-mono pointer-events-none">
+                            JS/C-Like Syntax
+                        </div>
+                     </div>
                      
                      <div className="p-4 bg-secondary border-t border-white/10 flex items-center gap-3">
                         {!isRunning || isPaused ? (
