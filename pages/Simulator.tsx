@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { 
   Play, RefreshCw, RotateCcw, Terminal, LayoutTemplate, FileCode, 
   MonitorPlay, Trash2, Cpu, Battery, Thermometer, Settings, X, 
@@ -7,7 +7,7 @@ import {
   ArrowRight, Plus, Footprints, Flag, Layers, CheckCircle, AlertTriangle,
   Sun, BatteryCharging, Radar, Compass, MapPin, SunMedium, CircleDot, FileText,
   Save, FolderOpen, Undo, Redo, RotateCw, AlertOctagon, Code, Activity,
-  ChevronLeft, ChevronRight
+  ChevronLeft, ChevronRight, Pause, Square, Gauge, List, Command
 } from 'lucide-react';
 import { RobotState, RobotSchema, SensorReadings } from '../types';
 import { translateCommands } from '../services/geminiService';
@@ -78,6 +78,14 @@ const INITIAL_ROBOT_STATE_BASE = {
   isRunning: false 
 };
 
+const AUTOCOMPLETE_COMMANDS = [
+  { label: 'FORWARD', desc: 'تحريك للأمام', type: 'move' },
+  { label: 'BACKWARD', desc: 'تحريك للخلف', type: 'move' },
+  { label: 'TURN_LEFT', desc: 'دوران يسار 90°', type: 'turn' },
+  { label: 'TURN_RIGHT', desc: 'دوران يمين 90°', type: 'turn' },
+  { label: 'WAIT', desc: 'انتظار دورة', type: 'wait' }
+];
+
 const AVAILABLE_COMPONENTS: ComponentItem[] = [
   { id: 'cpu-1', type: 'cpu', name: 'وحدة معالجة مركزية', nameEn: 'Main CPU Unit', icon: <Cpu size={20} />, powerConsumption: 0.5, description: 'عقل الروبوت الأساسي. لا يعمل الروبوت بدونه.', snippet: '// CPU Initialized' },
   { id: 'motor-1', type: 'motor', name: 'محرك دفع', nameEn: 'DC Motor', icon: <Settings size={20} />, powerConsumption: 5.0, description: 'يسمح بالحركة. يحتاج إلى طاقة عالية.', snippet: '["FORWARD", "WAIT"]' },
@@ -96,7 +104,7 @@ const AVAILABLE_COMPONENTS: ComponentItem[] = [
 const INITIAL_CHASSIS: RobotSlot[] = [
     { id: 'center', label: 'المعالج (الوسط)', labelEn: 'Center', component: AVAILABLE_COMPONENTS[0], allowedTypes: ['cpu', 'gyro'], rotation: 0 }, 
     { id: 'front', label: 'الجهة الأمامية', labelEn: 'Front', component: null, allowedTypes: ['sensor-dist', 'camera', 'gripper', 'sensor-light', 'lidar', 'bumper'], rotation: 0 },
-    { id: 'left', label: 'الجانب الأيسر', labelEn: 'Left', component: null, allowedTypes: ['motor', 'sensor-heat', 'speaker', 'battery', 'solar'], rotation: 0 },
+    { id: 'left', label: 'الجانب الأيسر', labelEn: 'Left', component: AVAILABLE_COMPONENTS[1], allowedTypes: ['motor', 'sensor-heat', 'speaker', 'battery', 'solar'], rotation: 0 },
     { id: 'right', label: 'الجانب الأيمن', labelEn: 'Right', component: AVAILABLE_COMPONENTS[1], allowedTypes: ['motor', 'sensor-heat', 'speaker', 'battery', 'solar'], rotation: 0 },
     { id: 'back', label: 'الجهة الخلفية', labelEn: 'Back', component: null, allowedTypes: ['sensor-dist', 'wifi', 'battery', 'gps', 'bumper'], rotation: 0 },
 ];
@@ -183,6 +191,12 @@ const Simulator: React.FC = () => {
   const [code, setCode] = useState<string>('// اكتب المنطق البرمجي هنا\n["FORWARD", "FORWARD", "TURN_LEFT", "WAIT", "FORWARD"]');
   const [aiInput, setAiInput] = useState('');
   const [aiLoading, setAiLoading] = useState(false);
+  
+  // Editor Refinements State
+  const [editorLineCount, setEditorLineCount] = useState(2);
+  const [suggestions, setSuggestions] = useState<{ list: typeof AUTOCOMPLETE_COMMANDS, activeIndex: number, query: string } | null>(null);
+  const textAreaRef = useRef<HTMLTextAreaElement>(null);
+  const highlightRef = useRef<HTMLPreElement>(null);
 
   // Configuration State
   const [simConfig, setSimConfig] = useState<SimConfig>(DEFAULT_CONFIG);
@@ -203,9 +217,21 @@ const Simulator: React.FC = () => {
   const [visitedCells, setVisitedCells] = useState<string[]>([]);
   const [showPath, setShowPath] = useState(true);
   const [componentStatus, setComponentStatus] = useState<Record<string, 'active' | 'error'>>({});
+
+  // Performance & Control State
+  const [simSpeed, setSimSpeed] = useState<1 | 2 | 5>(1);
+  const [isPaused, setIsPaused] = useState(false);
+  const simSpeedRef = useRef(1);
+  const isPausedRef = useRef(false);
+  const shouldStopRef = useRef(false);
+
+  // Sync refs
+  useEffect(() => { simSpeedRef.current = simSpeed; }, [simSpeed]);
+  useEffect(() => { isPausedRef.current = isPaused; }, [isPaused]);
   
   // Live Telemetry from Engine
   const [sensorData, setSensorData] = useState<SensorReadings>({ distance: 0, temperature: 0, light: 0, collision: false });
+  const [perfMetrics, setPerfMetrics] = useState({ fps: 0, batteryUsage: 0, tempFluctuation: 0 });
 
   // --- Initialization ---
   useEffect(() => {
@@ -252,7 +278,13 @@ const Simulator: React.FC = () => {
 
   const loadSavedDesigns = () => {
       const saved = localStorage.getItem('mulaqqen_designs');
-      if (saved) setSavedDesigns(JSON.parse(saved));
+      if (saved) {
+          try {
+              setSavedDesigns(JSON.parse(saved));
+          } catch (e) {
+              console.error("Failed to parse saved designs", e);
+          }
+      }
   };
 
   // --- Helper Functions ---
@@ -273,7 +305,7 @@ const Simulator: React.FC = () => {
   const handleUndo = () => {
       if (historyIndex > 0) {
           setHistoryIndex(historyIndex - 1);
-          setChassis(history[historyIndex - 1]);
+          setChassis(history[historyIndex + 1]);
           addLog('تم التراجع عن آخر إجراء', 'info');
       }
   };
@@ -295,10 +327,10 @@ const Simulator: React.FC = () => {
           component: slot.component ? { id: slot.component.id } : null
       }));
       
-      const newDesign: any = {
+      const newDesign: SavedDesign = {
           name,
           date: new Date().toLocaleDateString(),
-          chassis: chassisForSave
+          chassis: chassisForSave as RobotSlot[]
       };
       
       const updatedDesigns = [...savedDesigns, newDesign];
@@ -308,17 +340,36 @@ const Simulator: React.FC = () => {
   };
 
   const handleLoadDesign = (design: SavedDesign) => {
-      const hydratedChassis = design.chassis.map((slot: any) => {
-          if (slot.component && slot.component.id) {
-              const fullComp = AVAILABLE_COMPONENTS.find(c => c.id === slot.component.id);
-              if (fullComp) {
-                  return { ...slot, component: fullComp };
+      // Create a map of saved slots for easy lookup
+      const savedSlotsMap = new Map(design.chassis.map((s: any) => [s.id, s]));
+
+      // Map over INITIAL_CHASSIS to ensure we keep the current structural definition (labels, types, etc.)
+      // but apply the components and rotations from the saved design.
+      const hydratedChassis = INITIAL_CHASSIS.map(baseSlot => {
+          const savedSlot = savedSlotsMap.get(baseSlot.id);
+          
+          if (savedSlot) {
+              // Hydrate Component from ID
+              let component = null;
+              if (savedSlot.component && savedSlot.component.id) {
+                  const fullComp = AVAILABLE_COMPONENTS.find(c => c.id === savedSlot.component.id);
+                  if (fullComp) {
+                      component = fullComp;
+                  }
               }
+
+              return {
+                  ...baseSlot, 
+                  component: component,
+                  rotation: savedSlot.rotation || 0
+              };
           }
-          return { ...slot, component: null };
+          
+          // If slot didn't exist in saved design (newly added to app), return default base slot
+          return baseSlot;
       });
 
-      updateChassisWithHistory(hydratedChassis as RobotSlot[]);
+      updateChassisWithHistory(hydratedChassis);
       setShowLoadModal(false);
       addLog(`تم تحميل التصميم: ${design.name}`, 'success');
   };
@@ -383,9 +434,99 @@ const Simulator: React.FC = () => {
 
   const insertCodeSnippet = (slot: RobotSlot) => {
       if (slot.component?.snippet) {
-          setCode(prev => prev + '\n' + slot.component?.snippet);
+          const newCode = code + (code ? '\n' : '') + slot.component?.snippet;
+          setCode(newCode);
+          setEditorLineCount(newCode.split('\n').length);
           setActiveTab('editor');
           addLog('تم إدراج كود المكون في المحرر', 'success');
+      }
+  };
+
+  // --- Editor Logic ---
+  const handleEditorChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const val = e.target.value;
+    setCode(val);
+    setEditorLineCount(val.split('\n').length);
+    if (highlightRef.current) highlightRef.current.scrollTop = e.target.scrollTop;
+
+    // Autocomplete Logic
+    const cursor = e.target.selectionStart;
+    const textBefore = val.slice(0, cursor);
+    const lastWordMatch = textBefore.match(/([A-Z_a-z]+)$/);
+    
+    if (lastWordMatch) {
+        const query = lastWordMatch[1].toUpperCase();
+        const matches = AUTOCOMPLETE_COMMANDS.filter(c => c.label.startsWith(query));
+        if (matches.length > 0) {
+             setSuggestions({ list: matches, activeIndex: 0, query: lastWordMatch[1] });
+        } else {
+            setSuggestions(null);
+        }
+    } else {
+        setSuggestions(null);
+    }
+  };
+
+  const insertSuggestion = (cmd: string) => {
+    if (!suggestions || !textAreaRef.current) return;
+    
+    const cursor = textAreaRef.current.selectionStart;
+    const text = code;
+    const before = text.slice(0, cursor - suggestions.query.length);
+    const after = text.slice(cursor);
+    
+    const newCode = `${before}${cmd}${after}`;
+    setCode(newCode);
+    setSuggestions(null);
+    textAreaRef.current.focus();
+  };
+
+  const handleEditorKeyDown = (e: React.KeyboardEvent) => {
+    if (suggestions) {
+        if (e.key === 'ArrowDown') {
+            e.preventDefault();
+            setSuggestions(prev => prev ? ({ ...prev, activeIndex: (prev.activeIndex + 1) % prev.list.length }) : null);
+        } else if (e.key === 'ArrowUp') {
+            e.preventDefault();
+            setSuggestions(prev => prev ? ({ ...prev, activeIndex: (prev.activeIndex - 1 + prev.list.length) % prev.list.length }) : null);
+        } else if (e.key === 'Enter' || e.key === 'Tab') {
+            e.preventDefault();
+            insertSuggestion(suggestions.list[suggestions.activeIndex].label);
+        } else if (e.key === 'Escape') {
+            setSuggestions(null);
+        }
+    }
+  };
+
+  const getHighlightedCode = (code: string) => {
+      let html = code
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;");
+
+      // Highlight comments
+      html = html.replace(/(\/\/.*)/g, '<span class="text-gray-500 italic">$1</span>');
+
+      // Highlight commands within strings
+      AUTOCOMPLETE_COMMANDS.forEach(cmd => {
+          const regex = new RegExp(`"${cmd.label}"`, 'g');
+          const colorClass = cmd.type === 'move' ? 'text-emerald-400' : cmd.type === 'turn' ? 'text-blue-400' : 'text-yellow-400';
+          html = html.replace(regex, `<span class="${colorClass} font-bold">"${cmd.label}"</span>`);
+      });
+      
+      // Highlight brackets
+      html = html.replace(/(\[|\]|,)/g, '<span class="text-white/40">$1</span>');
+      
+      // Highlight numbers
+      html = html.replace(/\b(\d+)\b/g, '<span class="text-purple-400">$1</span>');
+
+      return <div dangerouslySetInnerHTML={{__html: html}} />;
+  };
+
+  const syncScroll = (e: React.UIEvent<HTMLTextAreaElement>) => {
+      if (highlightRef.current) {
+          highlightRef.current.scrollTop = e.currentTarget.scrollTop;
+          highlightRef.current.scrollLeft = e.currentTarget.scrollLeft;
       }
   };
 
@@ -424,6 +565,11 @@ const Simulator: React.FC = () => {
       };
   };
 
+  const handleStop = () => {
+    shouldStopRef.current = true;
+    setIsPaused(false); // Unpause to allow loop to exit
+  };
+
   const runSimulation = async () => {
     if (simState.isRunning) return;
 
@@ -431,6 +577,10 @@ const Simulator: React.FC = () => {
         addLog("فشل التحقق من التصميم. يرجى مراجعة التنبيهات.", "error");
         return;
     }
+
+    // Reset Control Flags
+    shouldStopRef.current = false;
+    setIsPaused(false);
 
     setActiveTab('simulator');
     setSimState(prev => ({ ...prev, isRunning: true }));
@@ -456,17 +606,43 @@ const Simulator: React.FC = () => {
     });
 
     let currentBattery = 100;
+    let lastTime = performance.now();
+    let lastTemp = 35;
 
     for (const cmd of commands) {
+      if (shouldStopRef.current) {
+          addLog("تم إيقاف المحاكاة يدوياً.", "info");
+          break;
+      }
       if (currentBattery <= 0) {
           addLog("نفاذ البطارية! توقف النظام.", "error");
           break;
       }
 
-      await new Promise(r => setTimeout(r, 800)); 
+      // Handle Pause
+      while (isPausedRef.current) {
+        if (shouldStopRef.current) break;
+        await new Promise(r => setTimeout(r, 100));
+      }
 
+      // Dynamic Speed Delay
+      const delay = 800 / simSpeedRef.current;
+      await new Promise(r => setTimeout(r, delay)); 
+
+      const now = performance.now();
+      const dt = now - lastTime;
+      const fps = dt > 0 ? Math.round(1000 / dt) : 0;
+      lastTime = now;
+
+      const preBattery = currentBattery;
       const result = engine.step(cmd);
       currentBattery = result.battery;
+
+      const batteryUsed = parseFloat((preBattery - result.battery).toFixed(2));
+      const tempChange = parseFloat((result.temperature - lastTemp).toFixed(2));
+      lastTemp = result.temperature;
+
+      setPerfMetrics({ fps, batteryUsage: batteryUsed, tempFluctuation: tempChange });
 
       setSimState(prev => ({ 
           ...prev, 
@@ -505,7 +681,7 @@ const Simulator: React.FC = () => {
       }
 
       setComponentStatus(currentStatus);
-      setTimeout(() => setComponentStatus({}), 600);
+      setTimeout(() => setComponentStatus({}), Math.max(100, 600 / simSpeedRef.current));
     }
 
     setSimState(prev => ({ ...prev, isRunning: false }));
@@ -516,15 +692,21 @@ const Simulator: React.FC = () => {
     if (!aiInput.trim()) return;
     setAiLoading(true);
     const cmds = await translateCommands(aiInput);
-    if (cmds.length > 0) setCode(JSON.stringify(cmds, null, 2));
+    if (cmds.length > 0) {
+        setCode(JSON.stringify(cmds, null, 2));
+        setEditorLineCount(JSON.stringify(cmds, null, 2).split('\n').length);
+    }
     setAiLoading(false);
   };
 
   const resetSim = () => {
-    setSimState({ ...INITIAL_ROBOT_STATE_BASE, x: simConfig.startX, y: simConfig.startY, direction: simConfig.startDir });
+    shouldStopRef.current = true;
+    setIsPaused(false);
+    setSimState({ ...INITIAL_ROBOT_STATE_BASE, x: simConfig.startX, y: simConfig.startY, direction: simConfig.startDir, isRunning: false });
     setVisitedCells([`${simConfig.startX},${simConfig.startY}`]);
     setLogs([]);
     setSensorData({ distance: 0, temperature: 0, light: 0, collision: false });
+    setPerfMetrics({ fps: 0, batteryUsage: 0, tempFluctuation: 0 });
     setComponentStatus({});
     initGrid();
   };
@@ -537,6 +719,7 @@ const Simulator: React.FC = () => {
       };
       
       setSimConfig(validatedConfig);
+      shouldStopRef.current = true; // Stop any running sim
       setSimState(prev => ({
           ...prev,
           x: validatedConfig.startX,
@@ -592,23 +775,39 @@ const Simulator: React.FC = () => {
                         <h3 className="text-white font-bold flex items-center gap-2 text-sm"><Box size={16} className="text-accent" /> مكتبة المكونات</h3>
                         <span className="text-[10px] text-gray-500 bg-white/5 px-2 py-1 rounded">اسحب للإضافة</span>
                      </div>
-                     <div className="space-y-3">
+                     <div className="space-y-3 pb-20">
                          {AVAILABLE_COMPONENTS.map(comp => (
                             <div key={comp.id} draggable onDragStart={(e) => handleDragStart(e, comp)} onDragEnd={() => setDraggedComponent(null)}
-                                className="group relative p-3 rounded-xl border bg-primary border-white/5 hover:border-accent hover:bg-white/5 cursor-grab active:cursor-grabbing transition flex items-center gap-3"
+                                className="group relative p-3 rounded-xl border bg-secondary/40 border-white/5 hover:border-accent/60 hover:bg-gradient-to-r hover:from-white/5 hover:to-transparent cursor-grab active:cursor-grabbing active:scale-95 transition-all duration-300 flex flex-col gap-2 hover:shadow-[0_4px_20px_-10px_rgba(99,102,241,0.3)] hover:translate-x-[-4px]"
                             >
-                                <div className="p-2 rounded-lg bg-white/5 text-gray-400 group-hover:text-accent">{comp.icon}</div>
-                                <div>
-                                    <div className="font-bold text-white text-sm">{comp.name}</div>
-                                    <div className="text-[10px] text-gray-500 flex items-center gap-1">
-                                        <Zap size={10} className={comp.powerConsumption > 0 ? 'text-yellow-500' : 'text-green-500'} />
-                                        {comp.powerConsumption > 0 ? `-${comp.powerConsumption} طاقة` : `+${Math.abs(comp.powerConsumption)} طاقة`}
+                                <div className="flex items-center gap-3">
+                                    <div className="p-2.5 rounded-lg bg-white/5 text-gray-400 group-hover:text-accent group-hover:bg-accent/10 group-hover:scale-110 transition-all duration-300 shadow-inner ring-1 ring-white/5 group-hover:ring-accent/20">
+                                        {comp.icon}
+                                    </div>
+                                    <div className="flex-1">
+                                        <div className="font-bold text-white text-sm group-hover:text-accent transition-colors duration-300 flex justify-between items-center">
+                                            {comp.name}
+                                            <GripHorizontal size={14} className="text-white/10 group-hover:text-white/30 transition-colors" />
+                                        </div>
+                                        <div className="text-[10px] text-gray-500 flex items-center gap-1.5 mt-0.5 group-hover:text-gray-400 transition-colors">
+                                            <Zap size={10} className={comp.powerConsumption > 0 ? 'text-amber-500' : 'text-emerald-500'} />
+                                            <span className={comp.powerConsumption > 0 ? 'text-amber-500/80' : 'text-emerald-500/80'}>
+                                                {comp.powerConsumption > 0 ? `${comp.powerConsumption}- طاقة` : `${Math.abs(comp.powerConsumption)}+ طاقة`}
+                                            </span>
+                                        </div>
                                     </div>
                                 </div>
-                                <div className="absolute right-full top-0 mr-2 w-48 bg-slate-800 p-3 rounded-lg shadow-xl border border-white/10 opacity-0 group-hover:opacity-100 pointer-events-none transition z-50">
-                                    <h4 className="font-bold text-white text-xs mb-1">{comp.name}</h4>
-                                    <p className="text-[10px] text-gray-400 leading-relaxed">{comp.description}</p>
+                                
+                                {/* Expandable Description */}
+                                <div className="grid grid-rows-[0fr] group-hover:grid-rows-[1fr] transition-all duration-300 ease-out">
+                                    <div className="overflow-hidden">
+                                        <div className="pt-2 mt-1 border-t border-white/5">
+                                            <p className="text-[10px] text-gray-400 leading-relaxed opacity-0 group-hover:opacity-100 transition-opacity duration-500 delay-100">{comp.description}</p>
+                                        </div>
+                                    </div>
                                 </div>
+                                
+                                <div className="absolute top-0 right-0 left-0 bottom-0 rounded-xl ring-2 ring-accent opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity duration-500"></div>
                             </div>
                          ))}
                      </div>
@@ -624,6 +823,13 @@ const Simulator: React.FC = () => {
                              {aiLoading ? <RefreshCw className="animate-spin" size={12} /> : <Zap size={12} />} توليد
                          </button>
                      </div>
+                     <div className="p-3 bg-blue-500/10 border border-blue-500/20 rounded-xl">
+                        <h4 className="text-xs font-bold text-blue-400 mb-2 flex items-center gap-1"><Command size={12}/> اختصارات</h4>
+                        <ul className="text-[10px] text-gray-400 space-y-1">
+                          <li>• <span className="text-white font-mono">Ctrl+Space</span> لإظهار الاقتراحات</li>
+                          <li>• <span className="text-white font-mono">Enter</span> لاختيار الاقتراح</li>
+                        </ul>
+                     </div>
                  </div>
              )}
 
@@ -637,7 +843,7 @@ const Simulator: React.FC = () => {
                                <div className="flex justify-between items-center mb-2">
                                   <span className="text-xs text-gray-400 font-bold flex items-center gap-2"><Wifi size={14} className="rotate-90"/> المسافة</span>
                                   <span className="text-highlight font-mono font-bold text-lg">{sensorData.distance > 100 ? '>100' : Math.round(sensorData.distance)} <span className="text-xs text-gray-500">cm</span></span>
-                               </div>
+                                </div>
                                <div className="w-full h-1.5 bg-white/10 rounded-full overflow-hidden">
                                    <div className="h-full bg-highlight transition-all duration-300" style={{width: `${Math.min(100, (sensorData.distance/100)*100)}%`}}></div>
                                </div>
@@ -655,7 +861,7 @@ const Simulator: React.FC = () => {
                            <div className="p-2 border-b border-white/5 -mx-4 px-6 mb-2">
                                 <h3 className="text-sm font-bold text-white flex items-center gap-2"><Cpu size={16} className="text-accent"/> حالة النظام</h3>
                            </div>
-                            <div>
+                            <div className="bg-primary/50 p-4 rounded-xl border border-white/5">
                                <div className="flex justify-between items-center mb-2">
                                   <span className="text-xs text-gray-400 font-bold flex items-center gap-2"><Battery size={14}/> البطارية</span>
                                   <span className={`font-mono font-bold text-sm ${simState.battery < 20 ? 'text-red-400' : 'text-green-400'}`}>{Math.round(simState.battery)}%</span>
@@ -664,6 +870,32 @@ const Simulator: React.FC = () => {
                                    <div className={`h-full rounded-full transition-all duration-300 ${simState.battery < 20 ? 'bg-red-500' : 'bg-green-500'}`} style={{width: `${simState.battery}%`}}></div>
                                </div>
                             </div>
+
+                            <hr className="border-white/5" />
+
+                            <div className="bg-primary/50 p-3 rounded-xl border border-white/5">
+                                <h4 className="text-xs font-bold text-gray-400 mb-3 flex items-center gap-2">
+                                    <Activity size={14} className="text-highlight" /> مقاييس الأداء
+                                </h4>
+                                <div className="grid grid-cols-3 gap-2">
+                                    <div className="bg-secondary/50 p-2 rounded-lg text-center border border-white/5">
+                                        <div className="text-[10px] text-gray-500 mb-1">FPS</div>
+                                        <div className="font-mono font-bold text-white text-sm">{perfMetrics.fps}</div>
+                                    </div>
+                                    <div className="bg-secondary/50 p-2 rounded-lg text-center border border-white/5">
+                                        <div className="text-[10px] text-gray-500 mb-1">استهلاك</div>
+                                        <div className={`font-mono font-bold text-sm ${perfMetrics.batteryUsage > 2 ? 'text-amber-400' : 'text-emerald-400'}`}>
+                                            {perfMetrics.batteryUsage}
+                                        </div>
+                                    </div>
+                                    <div className="bg-secondary/50 p-2 rounded-lg text-center border border-white/5">
+                                        <div className="text-[10px] text-gray-500 mb-1">حرارة Δ</div>
+                                        <div className={`font-mono font-bold text-sm ${perfMetrics.tempFluctuation > 0.5 ? 'text-red-400' : 'text-blue-300'}`}>
+                                            {perfMetrics.tempFluctuation > 0 ? '+' : ''}{perfMetrics.tempFluctuation}
+                                        </div>
+                                    </div>
+                                </div>
+                           </div>
                       </div>
                  </div>
              )}
@@ -776,13 +1008,76 @@ const Simulator: React.FC = () => {
           )}
 
           {activeTab === 'editor' && (
-             <div className="flex-1 p-8 bg-[#020617]">
-                 <div className="h-full bg-[#0f172a] rounded-2xl border border-white/10 shadow-2xl overflow-hidden relative">
-                     <div className="absolute top-0 left-0 right-0 bg-[#1e293b] h-9 border-b border-white/5 px-4 flex items-center gap-2">
-                         <div className="flex gap-1.5"><div className="w-2.5 h-2.5 rounded-full bg-red-500/20 border border-red-500/50"></div><div className="w-2.5 h-2.5 rounded-full bg-yellow-500/20 border border-yellow-500/50"></div></div>
-                         <span className="text-[10px] font-mono text-gray-400 ml-2">logic.json</span>
+             <div className="flex-1 p-8 bg-[#020617] overflow-hidden flex flex-col">
+                 <div className="flex-1 bg-[#0f172a] rounded-2xl border border-white/10 shadow-2xl flex flex-col overflow-hidden relative group">
+                     
+                     {/* Editor Header */}
+                     <div className="bg-[#1e293b] h-9 border-b border-white/5 px-4 flex items-center justify-between shrink-0">
+                         <div className="flex items-center gap-2">
+                             <div className="flex gap-1.5"><div className="w-2.5 h-2.5 rounded-full bg-red-500/20 border border-red-500/50"></div><div className="w-2.5 h-2.5 rounded-full bg-yellow-500/20 border border-yellow-500/50"></div></div>
+                             <span className="text-[10px] font-mono text-gray-400 ml-2 flex items-center gap-2"><FileCode size={10}/> logic.json</span>
+                         </div>
+                         <div className="flex items-center gap-2">
+                            <span className="text-[10px] text-gray-500 font-mono">{editorLineCount} lines</span>
+                         </div>
                      </div>
-                     <textarea value={code} onChange={e => setCode(e.target.value)} className="w-full h-full bg-transparent p-6 pt-12 text-green-400 font-mono text-sm resize-none focus:outline-none" spellCheck={false} />
+                     
+                     {/* Code Editor Area */}
+                     <div className="flex-1 relative flex text-sm font-mono overflow-hidden">
+                         {/* Line Numbers */}
+                         <div className="w-10 bg-[#1e293b]/50 border-r border-white/5 flex flex-col items-end py-6 pr-2 text-gray-600 select-none pointer-events-none">
+                             {Array.from({length: Math.max(10, editorLineCount)}).map((_, i) => (
+                                 <div key={i} className="leading-6 text-[10px] h-6">{i+1}</div>
+                             ))}
+                         </div>
+                         
+                         {/* Text Area & Highlight Overlay */}
+                         <div className="flex-1 relative">
+                             {/* Syntax Highlight Layer */}
+                             <pre ref={highlightRef} className="absolute inset-0 p-6 m-0 pointer-events-none whitespace-pre-wrap break-words leading-6 overflow-hidden text-transparent" aria-hidden="true">
+                                 {getHighlightedCode(code)}
+                             </pre>
+                             
+                             {/* Input Layer */}
+                             <textarea 
+                                ref={textAreaRef}
+                                value={code} 
+                                onChange={handleEditorChange} 
+                                onScroll={syncScroll}
+                                onKeyDown={handleEditorKeyDown}
+                                className="absolute inset-0 w-full h-full bg-transparent p-6 m-0 text-white font-mono leading-6 resize-none focus:outline-none caret-white overflow-auto whitespace-pre-wrap break-words" 
+                                spellCheck={false} 
+                                autoComplete="off"
+                                autoCorrect="off"
+                             />
+
+                             {/* Autocomplete Popup */}
+                             {suggestions && (
+                                 <div className="absolute bottom-4 left-4 z-50 bg-secondary border border-white/10 rounded-xl shadow-2xl overflow-hidden w-64 animate-scale-up">
+                                     <div className="bg-primary/50 px-3 py-1.5 border-b border-white/5 text-[10px] font-bold text-gray-400 flex items-center gap-2">
+                                         <Command size={10}/> اقتراحات ({suggestions.list.length})
+                                     </div>
+                                     <div className="max-h-40 overflow-y-auto custom-scrollbar p-1">
+                                         {suggestions.list.map((cmd, idx) => (
+                                             <button 
+                                                key={cmd.label}
+                                                onClick={() => insertSuggestion(cmd.label)}
+                                                className={`w-full text-left px-3 py-2 text-xs flex items-center justify-between rounded-lg transition-all
+                                                    ${idx === suggestions.activeIndex 
+                                                        ? 'bg-accent/20 text-white border border-accent/30' 
+                                                        : 'text-gray-400 hover:bg-white/5 hover:text-white'
+                                                    }
+                                                `}
+                                             >
+                                                <span className="font-bold font-mono">{cmd.label}</span>
+                                                <span className="text-[10px] opacity-50">{cmd.desc}</span>
+                                             </button>
+                                         ))}
+                                     </div>
+                                 </div>
+                             )}
+                         </div>
+                     </div>
                  </div>
              </div>
           )}
@@ -849,15 +1144,56 @@ const Simulator: React.FC = () => {
                                 </select>
                             </div>
                             
-                            <div className="bg-primary p-3 rounded-xl border border-white/5 space-y-2">
-                                <label className="text-xs text-gray-400 font-bold mb-2 block flex items-center gap-2"><Settings size={12}/> التحكم</label>
-                                <button onClick={runSimulation} disabled={simState.isRunning || !designStatus.isValid} className={`w-full bg-highlight hover:bg-sky-500 text-white py-2.5 rounded-lg text-xs font-bold shadow-lg transition flex items-center justify-center gap-2 disabled:opacity-50 ${!designStatus.isValid ? 'opacity-50 cursor-not-allowed' : ''}`}>
-                                    {simState.isRunning ? <RefreshCw className="animate-spin" size={14} /> : <Play size={14} />} 
-                                    {simState.isRunning ? 'جاري التشغيل...' : 'تشغيل المحاكاة'}
-                                </button>
-                                <div className="grid grid-cols-2 gap-2">
+                            <div className="bg-primary p-3 rounded-xl border border-white/5 space-y-3">
+                                <label className="text-xs text-gray-400 font-bold block flex items-center justify-between">
+                                    <span className="flex items-center gap-2"><Settings size={12}/> التحكم</span>
+                                    {simState.isRunning && <span className="text-[10px] text-accent animate-pulse">جاري التشغيل...</span>}
+                                </label>
+                                
+                                {/* Speed Controls */}
+                                <div className="flex items-center justify-between bg-secondary p-1 rounded-lg border border-white/5">
+                                    <div className="flex items-center gap-1 px-2 text-gray-500">
+                                        <Gauge size={14} />
+                                        <span className="text-[10px] font-bold">السرعة</span>
+                                    </div>
+                                    <div className="flex gap-1">
+                                        {[1, 2, 5].map((speed) => (
+                                            <button
+                                                key={speed}
+                                                onClick={() => setSimSpeed(speed as any)}
+                                                className={`px-2 py-1 text-[10px] font-bold rounded transition-all ${
+                                                    simSpeed === speed 
+                                                    ? 'bg-highlight text-white shadow-lg shadow-highlight/20 scale-105' 
+                                                    : 'text-gray-400 hover:text-white hover:bg-white/5'
+                                                }`}
+                                            >
+                                                {speed}x
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                {/* Play/Pause/Stop Controls */}
+                                <div className="flex gap-2">
+                                    {!simState.isRunning ? (
+                                        <button onClick={runSimulation} disabled={!designStatus.isValid} className={`w-full bg-highlight hover:bg-sky-500 text-white py-2.5 rounded-lg text-xs font-bold shadow-lg transition flex items-center justify-center gap-2 ${!designStatus.isValid ? 'opacity-50 cursor-not-allowed' : ''}`}>
+                                            <Play size={14} fill="currentColor" /> تشغيل المحاكاة
+                                        </button>
+                                    ) : (
+                                        <>
+                                            <button onClick={() => setIsPaused(!isPaused)} className={`flex-1 py-2.5 rounded-lg text-xs font-bold shadow-lg transition flex items-center justify-center gap-2 ${isPaused ? 'bg-emerald-500 hover:bg-emerald-600 text-white' : 'bg-yellow-500 hover:bg-yellow-600 text-white'}`}>
+                                                {isPaused ? <><Play size={14} fill="currentColor"/> استئناف</> : <><Pause size={14} fill="currentColor"/> إيقاف مؤقت</>}
+                                            </button>
+                                            <button onClick={handleStop} className="w-12 bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white rounded-lg flex items-center justify-center border border-red-500/20 transition">
+                                                <Square size={14} fill="currentColor" />
+                                            </button>
+                                        </>
+                                    )}
+                                </div>
+
+                                <div className="grid grid-cols-2 gap-2 pt-1">
                                     <button onClick={resetSim} className="bg-white/5 hover:bg-white/10 text-white py-2 rounded-lg text-xs font-bold border border-white/5 flex items-center justify-center gap-2">
-                                        <RotateCcw size={14} /> إعادة ضبط
+                                        <RotateCcw size={14} /> إعادة السيناريو
                                     </button>
                                     <button onClick={() => setShowSettingsModal(true)} className="bg-white/5 hover:bg-white/10 text-white py-2 rounded-lg text-xs font-bold border border-white/5 flex items-center justify-center gap-2">
                                         <Settings size={14} /> الإعدادات
