@@ -11,15 +11,22 @@
         theme: {
           extend: {
             colors: {
-              primary: '#0f172a', // Slate 900 (Professional Deep Navy Background)
-              secondary: '#1e293b', // Slate 800 (Card Backgrounds)
-              accent: '#6366f1', // Indigo 500 (Primary CTA, Brand Color)
-              highlight: '#38bdf8', // Sky 400 (Interactive, Glows, Links)
-              light: '#f8fafc', // Slate 50 (Text)
+              primary: '#0F1216', // Deep Solid Industrial Black
+              secondary: '#1A1E24', // Dark Blue/Grey Panel
+              surface: '#252A33', // Elevated Elements
+              accent: '#2D89E5', // Tech Blue
+              accentHover: '#2273c4', // Darker Blue
+              highlight: '#F7C600', // Signal Yellow
+              light: '#E9EEF5', // Steel White
+              muted: '#9CA3AF', // Cool Gray
             },
             fontFamily: {
-              sans: ['Tajawal', 'Cairo', 'sans-serif'], // Arabic Primary
-              latin: ['Montserrat', 'sans-serif'], // English Primary
+              sans: ['IBM Plex Arabic', 'sans-serif'], 
+              mono: ['JetBrains Mono', 'monospace'],
+            },
+            boxShadow: {
+              'industrial': '0 0 0 1px rgba(255, 255, 255, 0.05), 0 4px 6px -1px rgba(0, 0, 0, 0.5)',
+              'glow': '0 0 0 1px #2D89E5',
             }
           }
         }
@@ -27,30 +34,63 @@
     </script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700&family=Tajawal:wght@400;500;700;800&family=Montserrat:wght@400;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Arabic:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
     <style>
       body {
-        font-family: 'Tajawal', 'Cairo', sans-serif;
-        background-color: #0f172a;
-        color: #f8fafc;
-      }
-      /* Custom Scrollbar */
-      ::-webkit-scrollbar {
-        width: 8px;
-      }
-      ::-webkit-scrollbar-track {
-        background: #1e293b; 
-      }
-      ::-webkit-scrollbar-thumb {
-        background: #6366f1; 
-        border-radius: 4px;
-      }
-      ::-webkit-scrollbar-thumb:hover {
-        background: #4f46e5; 
+        font-family: 'IBM Plex Arabic', sans-serif;
+        background-color: #0F1216;
+        color: #E9EEF5;
+        -webkit-font-smoothing: antialiased;
       }
       
-      .font-latin {
-        font-family: 'Montserrat', sans-serif;
+      /* Industrial Scrollbar */
+      ::-webkit-scrollbar {
+        width: 8px;
+        height: 8px;
+      }
+      ::-webkit-scrollbar-track {
+        background: #0F1216; 
+      }
+      ::-webkit-scrollbar-thumb {
+        background: #252A33; 
+        border-radius: 0px;
+      }
+      ::-webkit-scrollbar-thumb:hover {
+        background: #2D89E5; 
+      }
+
+      /* Clean Industrial Utilities */
+      .industrial-card {
+        background-color: #1A1E24;
+        border: 1px solid rgba(255, 255, 255, 0.05);
+      }
+
+      /* Input Reset */
+      input, textarea, select {
+        background-color: #0F1216;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        transition: border-color 0.2s ease;
+        border-radius: 4px;
+      }
+      input:focus, textarea:focus, select:focus {
+        border-color: #2D89E5;
+        outline: none;
+      }
+      
+      /* Engineering Grid Background - Solid Overlay Pattern */
+      .bg-grid {
+        background-size: 40px 40px;
+        background-image: radial-gradient(rgba(255, 255, 255, 0.08) 1px, transparent 1px);
+      }
+
+      /* Shake Animation for Collision */
+      @keyframes shake {
+        0%, 100% { transform: translateX(0); }
+        10%, 30%, 50%, 70%, 90% { transform: translateX(-4px); }
+        20%, 40%, 60%, 80% { transform: translateX(4px); }
+      }
+      .animate-shake {
+        animation: shake 0.4s cubic-bezier(.36,.07,.19,.97) both;
       }
     </style>
   <script type="importmap">

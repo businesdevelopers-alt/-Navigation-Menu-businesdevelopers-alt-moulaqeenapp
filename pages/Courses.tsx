@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { PlayCircle, Clock, BookOpen, CheckCircle, ArrowRight } from 'lucide-react';
 import { Course } from '../types';
@@ -62,16 +61,16 @@ const Courses: React.FC = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
           {COURSES.map((course) => (
             <Link to={`/courses/${course.id}`} key={course.id} className="block group h-full">
-              <div className="bg-secondary rounded-2xl overflow-hidden border border-white/5 hover:border-accent transition-all duration-300 group-hover:shadow-[0_0_20px_rgba(212,175,55,0.1)] flex flex-col h-full relative">
+              <div className="bg-secondary rounded-lg overflow-hidden border border-white/5 hover:border-accent transition-all duration-300 flex flex-col h-full relative">
                 <div className="relative h-48 overflow-hidden">
-                  <div className="absolute inset-0 bg-gradient-to-t from-secondary to-transparent z-10 opacity-60"></div>
+                  <div className="absolute inset-0 bg-black/40 z-10"></div>
                   <img 
                     src={course.image} 
                     alt={course.title} 
-                    className="w-full h-full object-cover transform group-hover:scale-110 transition duration-700"
+                    className="w-full h-full object-cover transform group-hover:scale-105 transition duration-500"
                   />
-                  <div className={`absolute top-3 right-3 px-3 py-1 rounded-full text-xs font-bold text-white border border-white/10 backdrop-blur-md z-20
-                    ${course.level === 'beginner' ? 'bg-emerald-600/80' : course.level === 'intermediate' ? 'bg-accent/80' : 'bg-red-500/80'}
+                  <div className={`absolute top-3 right-3 px-3 py-1 rounded text-xs font-bold text-white border border-white/10 z-20
+                    ${course.level === 'beginner' ? 'bg-emerald-700' : course.level === 'intermediate' ? 'bg-accent' : 'bg-red-700'}
                   `}>
                     {course.level === 'beginner' ? 'مبتدئ' : course.level === 'intermediate' ? 'متوسط' : 'متقدم'}
                   </div>
@@ -96,10 +95,10 @@ const Courses: React.FC = () => {
                     <span className={`text-lg font-bold ${course.price === 'free' ? 'text-emerald-400' : 'text-highlight'}`}>
                       {course.price === 'free' ? 'مجاني' : `${course.price} ر.س`}
                     </span>
-                    <div className={`flex-1 py-2 rounded-lg text-center font-bold text-sm transition flex items-center justify-center gap-2
+                    <div className={`flex-1 py-2 rounded text-center font-bold text-sm transition flex items-center justify-center gap-2 border border-white/10
                       ${course.price === 'free' 
-                        ? 'bg-accent text-white group-hover:bg-[#b5952f]' 
-                        : 'bg-white/5 text-white group-hover:bg-highlight group-hover:text-white'
+                        ? 'bg-accent text-white group-hover:bg-accentHover border-accent' 
+                        : 'bg-surface text-white group-hover:bg-white/10'
                       }
                     `}>
                       {course.price === 'free' ? (
@@ -122,10 +121,9 @@ const Courses: React.FC = () => {
         </div>
         
         {/* CTA Section */}
-        <div className="mt-20 bg-secondary rounded-3xl p-10 border border-white/5 text-center relative overflow-hidden">
-          <div className="absolute inset-0 bg-gradient-to-r from-accent/5 to-highlight/5"></div>
-          <div className="absolute -top-24 -right-24 w-48 h-48 bg-accent/10 rounded-full blur-3xl"></div>
-          <div className="absolute -bottom-24 -left-24 w-48 h-48 bg-highlight/10 rounded-full blur-3xl"></div>
+        <div className="mt-20 bg-secondary rounded-lg p-10 border border-white/5 text-center relative overflow-hidden">
+          {/* Grid overlay instead of gradient */}
+          <div className="absolute inset-0 bg-grid opacity-10 pointer-events-none"></div>
           
           <div className="relative z-10">
             <h2 className="text-2xl md:text-3xl font-bold text-white mb-4">لم تجد المسار المناسب؟</h2>
@@ -136,9 +134,9 @@ const Courses: React.FC = () => {
                 <input 
                   type="email" 
                   placeholder="بريدك الإلكتروني" 
-                  className="flex-1 bg-primary border border-white/10 rounded-lg px-4 py-3 text-white focus:border-accent focus:outline-none placeholder-gray-600"
+                  className="flex-1 bg-primary border border-white/10 rounded px-4 py-3 text-white focus:border-accent focus:outline-none placeholder-gray-600"
                 />
-                <button className="bg-accent text-white font-bold px-6 py-3 rounded-lg hover:opacity-90 transition shadow-lg shadow-accent/10 flex items-center justify-center gap-2">
+                <button className="bg-accent text-white font-bold px-6 py-3 rounded hover:opacity-90 transition border border-accent flex items-center justify-center gap-2">
                   اشترك <ArrowRight size={18} />
                 </button>
             </div>

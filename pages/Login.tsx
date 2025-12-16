@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Bot, Mail, ArrowRight, RefreshCw } from 'lucide-react';
@@ -37,11 +36,8 @@ const Login: React.FC = () => {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-primary py-12 px-4 sm:px-6 lg:px-8 relative overflow-hidden">
-      {/* Background Elements */}
-      <div className="absolute top-[-10%] left-[-10%] w-96 h-96 bg-accent/10 rounded-full blur-3xl"></div>
-      <div className="absolute bottom-[-10%] right-[-10%] w-96 h-96 bg-highlight/10 rounded-full blur-3xl"></div>
-
-      <div className="max-w-md w-full space-y-8 bg-secondary p-10 rounded-3xl border border-white/5 shadow-2xl relative z-10">
+      
+      <div className="max-w-md w-full space-y-8 bg-secondary p-10 rounded-lg border border-white/5 relative z-10">
         <div className="text-center">
           <Link to="/" className="inline-flex items-center justify-center text-accent mb-6">
              <Bot size={48} />
@@ -69,7 +65,7 @@ const Login: React.FC = () => {
                   required
                   value={formData.email}
                   onChange={handleChange}
-                  className="block w-full pr-10 bg-primary border border-white/10 rounded-lg py-3 text-white placeholder-gray-500 focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent sm:text-sm transition"
+                  className="block w-full pr-10 bg-primary border border-white/10 rounded-md py-3 text-white placeholder-gray-500 focus:outline-none focus:border-accent transition"
                   placeholder="name@example.com"
                 />
               </div>
@@ -91,7 +87,7 @@ const Login: React.FC = () => {
             <button
               type="submit"
               disabled={loading}
-              className="group relative w-full flex justify-center py-3 px-4 border border-transparent text-sm font-bold rounded-lg text-white bg-accent hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-accent shadow-lg shadow-accent/20 transition disabled:opacity-50 disabled:cursor-not-allowed"
+              className="group relative w-full flex justify-center py-3 px-4 border border-transparent text-sm font-bold rounded-md text-white bg-accent hover:bg-accentHover focus:outline-none transition disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {loading ? <RefreshCw className="animate-spin" size={20} /> : (
                 <>

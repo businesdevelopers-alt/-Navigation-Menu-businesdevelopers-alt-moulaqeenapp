@@ -1,4 +1,3 @@
-
 import { RobotSchema, RobotState, SimulationStepResult, SensorReadings, RobotCommand } from '../types';
 
 export class SimulationEngine {
@@ -26,6 +25,7 @@ export class SimulationEngine {
   public step(command: string): SimulationStepResult {
     const logs: string[] = [];
     let moved = false;
+    let collisionDetected = false;
 
     // 1. Power Consumption Logic
     const drain = this.robot.power.consumptionPerTick;
@@ -37,7 +37,7 @@ export class SimulationEngine {
 
     if (this.state.battery <= 0) {
       logs.push("CRITICAL: Battery depleted. System shutdown.");
-      return this.generateResult(moved, logs);
+      return this.generateResult(moved, logs, collisionDetected);
     }
 
     // 2. Movement Logic
@@ -66,8 +66,9 @@ export class SimulationEngine {
 
          if (this.isValidPosition(nextX, nextY)) {
            if (this.gridMap[nextY][nextX] === 'obstacle') {
-             logs.push("WARNING: Obstacle detected! Impact!");
+             logs.push("CRITICAL: COLLISION DETECTED!");
              this.state.battery -= 5; // Impact penalty
+             collisionDetected = true;
            } else {
              this.state.x = nextX;
              this.state.y = nextY;
@@ -86,7 +87,8 @@ export class SimulationEngine {
     }
 
     // 3. Sensor Update (After movement)
-    const sensors = this.readSensors();
+    // Pass collision state to sensors
+    const sensors = this.readSensors(collisionDetected);
 
     return {
       x: this.state.x,
@@ -104,7 +106,7 @@ export class SimulationEngine {
     return x >= 0 && x < this.gridW && y >= 0 && y < this.gridH;
   }
 
-  private readSensors(): SensorReadings {
+  private readSensors(collision: boolean = false): SensorReadings {
     // Basic Ray Casting for Distance Sensor
     let distance = 999; // Default infinity
     const hasDistSensor = this.robot.slots.front?.type === 'sensor-dist' || this.robot.slots.front?.type === 'lidar';
@@ -136,18 +138,18 @@ export class SimulationEngine {
       distance,
       temperature: 24 + (Math.random() * 2), // Ambient 24C + variation
       light: 80 - (Math.random() * 10), // Ambient Light
-      collision: false // To be implemented with bumpers
+      collision // Set collision state
     };
   }
 
-  private generateResult(moved: boolean, logs: string[]): SimulationStepResult {
+  private generateResult(moved: boolean, logs: string[], collision: boolean): SimulationStepResult {
     return {
       x: this.state.x,
       y: this.state.y,
       direction: this.state.direction,
       battery: this.state.battery,
       temperature: this.state.temperature,
-      sensors: this.readSensors(),
+      sensors: this.readSensors(collision),
       logs,
       moved
     };
