@@ -53,6 +53,7 @@ const Navbar: React.FC = () => {
                 <NavLink to="/simulator" label="المحاكي" active={location.pathname === '/simulator'} />
                 <NavLink to="/courses" label="الدورات" active={location.pathname.startsWith('/courses')} />
                 <NavLink to="/store" label="المتجر" active={location.pathname.startsWith('/store')} />
+                <NavLink to="/gallery" label="معرض الأعمال" active={location.pathname === '/gallery'} />
                 <NavLink to="/support" label="الدعم" active={location.pathname === '/support'} />
 
                 {/* More Dropdown */}
@@ -154,6 +155,7 @@ const Navbar: React.FC = () => {
                 <MobileLink to="/simulator" onClick={() => setIsMobileMenuOpen(false)}>المحاكي</MobileLink>
                 <MobileLink to="/courses" onClick={() => setIsMobileMenuOpen(false)}>الدورات</MobileLink>
                 <MobileLink to="/store" onClick={() => setIsMobileMenuOpen(false)}>المتجر</MobileLink>
+                <MobileLink to="/gallery" onClick={() => setIsMobileMenuOpen(false)}>معرض الأعمال</MobileLink>
                 <MobileLink to="/support" onClick={() => setIsMobileMenuOpen(false)}>الدعم</MobileLink>
 
                 <div className="pt-2 border-t border-white/10 my-2"></div>

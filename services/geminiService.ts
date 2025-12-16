@@ -3,48 +3,74 @@ import { GoogleGenAI, Type } from "@google/genai";
 const apiKey = process.env.API_KEY || '';
 const ai = new GoogleGenAI({ apiKey });
 
-export const translateCommands = async (prompt: string): Promise<string[]> => {
+export const translateCommands = async (
+  prompt: string,
+  context?: {
+    robotState: { x: number; y: number; direction: number };
+    target: { x: number; y: number };
+    obstacles: { x: number; y: number }[];
+    gridSize: number;
+  }
+): Promise<string[]> => {
   if (!apiKey) {
     console.warn("No API Key provided");
     return [];
   }
 
   try {
+    let contextInstruction = "";
+    if (context) {
+      contextInstruction = `
+      CURRENT SIMULATION CONTEXT:
+      - Grid Size: ${context.gridSize}x${context.gridSize} (0-indexed).
+      - Robot Position: x=${context.robotState.x}, y=${context.robotState.y}, Facing=${context.robotState.direction}° (0=Up, 90=Right, 180=Down, 270=Left).
+      - Target Flag Position: x=${context.target.x}, y=${context.target.y}.
+      - Static Obstacles at: ${JSON.stringify(context.obstacles)}.
+
+      INTELLIGENT NAVIGATION RULES:
+      1. **Pathfinding**: If the user asks to "reach the target", "go to flag", "solve the maze", or "win" (in English or Arabic), you MUST calculate a valid path from the current robot position to the target, avoiding all obstacles.
+      2. **Orientation**: Consider the robot's current facing direction. If it needs to move East but is facing North, issue a TURN_RIGHT command first.
+      3. **Spatial Queries**: If the user says "move to (x,y)", calculate the path to that specific cell.
+      `;
+    }
+
     const response = await ai.models.generateContent({
       model: "gemini-2.5-flash",
       contents: prompt,
       config: {
-        temperature: 0, // Deterministic output
+        temperature: 0.1, // Highly deterministic for code generation
         topK: 1,
         systemInstruction: `You are a precise Robot Command Interpreter for the 'Mulaqqen' platform.
         Your task is to translate natural language inputs (in Arabic or English) into a strict JSON array of executable robot commands.
 
+        ${contextInstruction}
+
         AVAILABLE COMMANDS:
-        - FORWARD
-        - BACKWARD
-        - TURN_LEFT
-        - TURN_RIGHT
-        - WAIT
+        - FORWARD (Moves 1 step in current direction)
+        - BACKWARD (Moves 1 step opposite to current direction)
+        - TURN_LEFT (Rotates 90° counter-clockwise)
+        - TURN_RIGHT (Rotates 90° clockwise)
+        - WAIT (Pauses execution)
 
         TRANSLATION RULES:
         1. **Strict Output**: Return ONLY a JSON array of strings. No markdown, no explanations.
-        2. **Loop Unrolling**: If the user says "move 3 times" or "تحرك ٣ خطوات", output the command repeated 3 times (e.g., ["FORWARD", "FORWARD", "FORWARD"]).
+        2. **Loop Unrolling**: If the user says "move 3 times", output ["FORWARD", "FORWARD", "FORWARD"].
         3. **Arabic Support**:
            - "أمام" / "قدام" / "سيد" / "تحرك" -> FORWARD
            - "خلف" / "ورا" / "ارجع" -> BACKWARD
            - "يمين" / "لف يمين" -> TURN_RIGHT
            - "يسار" / "لف يسار" -> TURN_LEFT
            - "انتظر" / "قف" -> WAIT
-        4. **Mixed Input**: If the input mixes code and text, extract the intent and convert to commands.
-        5. **Validity**: If the input is already valid commands, capitalize them and return them as an array.
+           - "وصلني للعلم" / "حل المتاهة" -> [Use Pathfinding Logic]
+        4. **Mixed Input**: Extract intent from mixed code/text.
 
-        Example 1:
+        Example 1 (Relative):
         Input: "تحرك خطوتين للامام ثم لف يمين"
         Output: ["FORWARD", "FORWARD", "TURN_RIGHT"]
 
-        Example 2:
-        Input: "Go forward, wait, then go back"
-        Output: ["FORWARD", "WAIT", "BACKWARD"]`,
+        Example 2 (Contextual - assuming robot at 0,0 facing Right, Target at 2,0):
+        Input: "اذهب للهدف"
+        Output: ["FORWARD", "FORWARD"]`,
         
         responseMimeType: "application/json",
         responseSchema: {
@@ -74,28 +100,25 @@ export const streamAssistantHelp = async (
 ) => {
   if (!apiKey) throw new Error("API Key not found");
 
-  const systemInstruction = `You are "Mulaqqen AI", an expert robotics engineer and coding tutor for the Mulaqqen platform.
+  const systemInstruction = `You are "Mulaqqen AI", a friendly and expert robotics engineer for the Mulaqqen platform.
+  Your goal is to help students learn robotics programming, debug their code, and understand hardware concepts.
 
-  PLATFORM CONTEXT:
-  - Commands: FORWARD, BACKWARD, TURN_LEFT, TURN_RIGHT, WAIT.
-  - Sensors: Lidar (distance), Thermal (temp), Camera (vision), Battery (power).
-  - The user uses a code editor to control a simulated robot on a grid.
+  PLATFORM SPECIFICATIONS:
+  - **Commands**: FORWARD, BACKWARD, TURN_LEFT, TURN_RIGHT, WAIT.
+  - **Sensors**: Lidar (distance), Thermal (temp), Camera (vision), Battery (power).
+  - **Environment**: A grid-based simulation where the robot must navigate obstacles to reach a target.
 
-  YOUR CAPABILITIES:
-  1. 🛠️ ERROR CORRECTION: If the user asks to fix code or find errors, analyze the "Current Code" context carefully. Identify syntax errors or logical issues. Return the FIXED code inside a markdown code block (\`\`\`).
-  2. 📐 DESIGN HELP: If the user asks about robot design/configuration, analyze the "Robot State" (battery, components). Suggest adding sensors or upgrading motors if the state shows weaknesses.
-  3. ℹ️ SYMBOL EXPLANATION: Explain the available commands (FORWARD, etc.) clearly in Arabic with examples.
+  YOUR RESPONSIBILITIES:
+  1. **Debugger**: When asked to fix code, analyze the [Current Code] below. Look for syntax errors, logical traps (like infinite loops), or missing logic. Provide the corrected code in a code block.
+  2. **Architect**: If asked about design, analyze the [Robot State]. If the robot lacks motors, warn the user. If they crash often, suggest sensors.
+  3. **Teacher**: Explain concepts simply. Use emojis to make it engaging.
+  4. **Language**: Respond primarily in Arabic, but use English for code keywords and technical terms.
 
-  TONE:
-  - Technical yet friendly.
-  - Use "Industrial SaaS" style formatting (bullet points, bold text).
-  - Language: Arabic (Primary). Use English for technical terms/commands.
-
-  CONTEXT DATA:
+  CONTEXT:
   [Current Code]:
   ${currentCode || "// No code provided"}
 
-  [Robot State]:
+  [Robot State & Config]:
   ${JSON.stringify(robotState || {}, null, 2)}
   `;
 

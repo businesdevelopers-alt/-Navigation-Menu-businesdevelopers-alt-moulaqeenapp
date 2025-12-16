@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { HashRouter as Router, Routes, Route } from 'react-router-dom';
 import Layout from './components/Layout';
@@ -15,6 +14,7 @@ import Profile from './pages/Profile';
 import ProductDetails from './pages/ProductDetails';
 import CourseDetails from './pages/CourseDetails';
 import Blog from './pages/Blog';
+import RobotsGallery from './pages/RobotsGallery';
 import Privacy from './pages/Privacy';
 import Terms from './pages/Terms';
 
@@ -31,6 +31,7 @@ const App: React.FC = () => {
           <Route path="store/product/:id" element={<ProductDetails />} />
           <Route path="about" element={<About />} />
           <Route path="blog" element={<Blog />} />
+          <Route path="gallery" element={<RobotsGallery />} />
           <Route path="support" element={<Support />} />
           <Route path="docs" element={<Docs />} />
           <Route path="login" element={<Login />} />
