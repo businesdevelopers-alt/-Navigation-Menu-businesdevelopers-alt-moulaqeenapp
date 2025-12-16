@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Play, Pause, RotateCcw, Send, Terminal, Battery, Thermometer, Activity, Bot, Sparkles, FileCode, Loader2, Wrench, Cpu, Zap, ArrowUp, ArrowDown, ArrowLeft, ArrowRight, ChevronDown, Package, X, GripVertical } from 'lucide-react';
+import { Play, Pause, RotateCcw, Send, Terminal, Battery, Thermometer, Activity, Bot, Sparkles, FileCode, Loader2, Wrench, Cpu, Zap, ArrowUp, ArrowDown, ArrowLeft, ArrowRight, ChevronDown, Package, X, GripVertical, MagicWand } from 'lucide-react';
 import { SimulationEngine } from '../services/simulationEngine';
-import { streamAssistantHelp } from '../services/geminiService';
+import { streamAssistantHelp, translateCommands } from '../services/geminiService';
 import { RobotState, RobotSchema, ComponentSchema } from '../types';
 
 const GRID_SIZE = 10;
@@ -55,6 +55,11 @@ const Simulator: React.FC = () => {
   const [chatMessages, setChatMessages] = useState<{role: 'user' | 'model', text: string}[]>([]);
   const [chatInput, setChatInput] = useState('');
   const [isChatLoading, setIsChatLoading] = useState(false);
+
+  // AI Command Generator State
+  const [aiPrompt, setAiPrompt] = useState('');
+  const [isAiGenerating, setIsAiGenerating] = useState(false);
+  const [showAiInput, setShowAiInput] = useState(false);
 
   // Robot Configuration State
   const [robotConfig, setRobotConfig] = useState<RobotSchema>(INITIAL_ROBOT_CONFIG);
@@ -208,6 +213,7 @@ const Simulator: React.FC = () => {
       }));
   };
 
+  // --- AI HANDLERS ---
   const handleChatSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!chatInput.trim()) return;
@@ -238,6 +244,30 @@ const Simulator: React.FC = () => {
         setChatMessages(prev => [...prev, { role: 'model', text: "عذراً، حدث خطأ في الاتصال بالمساعد الذكي." }]);
     } finally {
         setIsChatLoading(false);
+    }
+  };
+
+  const handleGenerateCode = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!aiPrompt.trim()) return;
+
+    setIsAiGenerating(true);
+    try {
+      const commands = await translateCommands(aiPrompt);
+      if (commands && commands.length > 0) {
+        const comment = `\n// AI: ${aiPrompt}\n`;
+        const codeBlock = commands.join('\n') + '\n';
+        setCode(prev => prev + comment + codeBlock);
+        setLogs(prev => [...prev, `> AI generated ${commands.length} commands.`]);
+        setAiPrompt('');
+        setShowAiInput(false);
+      } else {
+        setLogs(prev => [...prev, '> AI could not understand the instruction.']);
+      }
+    } catch (err) {
+      setLogs(prev => [...prev, '> Error generating code.']);
+    } finally {
+      setIsAiGenerating(false);
     }
   };
 
@@ -407,6 +437,48 @@ const Simulator: React.FC = () => {
              <div className="flex-1 flex flex-col overflow-hidden relative">
                 {activeTab === 'editor' && (
                    <>
+                     {/* AI Magic Input */}
+                     <div className="bg-[#15191e] border-b border-white/5">
+                        {!showAiInput ? (
+                           <button 
+                              onClick={() => setShowAiInput(true)}
+                              className="w-full py-2 px-4 flex items-center justify-center gap-2 text-xs text-accent hover:bg-white/5 transition-colors font-medium"
+                           >
+                              <Sparkles size={14} />
+                              اضغط هنا لتوليد الكود باللغة العربية
+                           </button>
+                        ) : (
+                           <form onSubmit={handleGenerateCode} className="p-3 animate-in slide-in-from-top duration-200">
+                              <div className="relative">
+                                 <input 
+                                    type="text" 
+                                    value={aiPrompt}
+                                    onChange={(e) => setAiPrompt(e.target.value)}
+                                    placeholder="مثال: تحرك للأمام 3 خطوات ثم لف يمين..."
+                                    className="w-full bg-black border border-accent/30 rounded-lg py-2 pl-3 pr-20 text-sm text-white focus:border-accent focus:outline-none"
+                                    autoFocus
+                                 />
+                                 <div className="absolute left-1 top-1 flex items-center gap-1">
+                                    <button 
+                                       type="submit" 
+                                       disabled={isAiGenerating}
+                                       className="bg-accent hover:bg-accentHover text-white p-1.5 rounded transition disabled:opacity-50"
+                                    >
+                                       {isAiGenerating ? <Loader2 size={14} className="animate-spin" /> : <ArrowLeft size={14} />}
+                                    </button>
+                                    <button 
+                                       type="button" 
+                                       onClick={() => setShowAiInput(false)}
+                                       className="bg-white/10 hover:bg-white/20 text-gray-400 hover:text-white p-1.5 rounded transition"
+                                    >
+                                       <X size={14} />
+                                    </button>
+                                 </div>
+                              </div>
+                           </form>
+                        )}
+                     </div>
+
                      <textarea 
                         value={code}
                         onChange={(e) => setCode(e.target.value)}

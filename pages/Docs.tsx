@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Book, FileText, Terminal, Code, Cpu, Server, Layers, ChevronLeft } from 'lucide-react';
+import { Book, FileText, Terminal, Code, Cpu, Server, Layers, ChevronLeft, AlertOctagon, Wrench } from 'lucide-react';
 
 const Docs: React.FC = () => {
   const [activeSection, setActiveSection] = useState('intro');
@@ -40,12 +40,28 @@ const Docs: React.FC = () => {
                 {activeSection === 'commands' && <ChevronLeft size={14} />}
             </button>
             <button 
+                onClick={() => setActiveSection('components')}
+                className={`w-full text-right px-4 py-2 rounded-lg text-sm font-medium transition flex items-center justify-between group
+                ${activeSection === 'components' ? 'bg-white/10 text-white' : 'text-gray-400 hover:text-white hover:bg-white/5'}
+            `}>
+                دليل المكونات
+                {activeSection === 'components' && <ChevronLeft size={14} />}
+            </button>
+            <button 
                 onClick={() => setActiveSection('ai')}
                 className={`w-full text-right px-4 py-2 rounded-lg text-sm font-medium transition flex items-center justify-between group
                 ${activeSection === 'ai' ? 'bg-white/10 text-white' : 'text-gray-400 hover:text-white hover:bg-white/5'}
             `}>
                 الذكاء الاصطناعي (AI)
                 {activeSection === 'ai' && <ChevronLeft size={14} />}
+            </button>
+            <button 
+                onClick={() => setActiveSection('troubleshooting')}
+                className={`w-full text-right px-4 py-2 rounded-lg text-sm font-medium transition flex items-center justify-between group
+                ${activeSection === 'troubleshooting' ? 'bg-white/10 text-white' : 'text-gray-400 hover:text-white hover:bg-white/5'}
+            `}>
+                استكشاف الأخطاء
+                {activeSection === 'troubleshooting' && <ChevronLeft size={14} />}
             </button>
             <button 
                 onClick={() => setActiveSection('api')}
@@ -172,6 +188,57 @@ const Docs: React.FC = () => {
             </article>
           )}
 
+          {activeSection === 'components' && (
+            <article className="animate-in fade-in duration-300">
+                <h1 className="text-3xl font-bold text-white mb-6">دليل المكونات (Components Guide)</h1>
+                <p className="text-gray-300 mb-6">
+                    تعرف على وظائف المكونات المتاحة في المحاكي وكيفية تأثيرها على أداء الروبوت واستهلاك الطاقة.
+                </p>
+
+                <div className="grid gap-4">
+                    <div className="bg-primary p-5 rounded-lg border border-white/5 hover:border-accent/30 transition">
+                        <div className="flex items-center justify-between mb-2">
+                            <h3 className="font-bold text-white flex items-center gap-2">
+                                <span className="p-1 bg-yellow-500/20 text-yellow-500 rounded"><Cpu size={16} /></span>
+                                محرك سيرفو (Servo Motor)
+                            </h3>
+                            <span className="text-xs font-mono text-gray-400 border border-white/10 px-2 py-1 rounded">2⚡ / tick</span>
+                        </div>
+                        <p className="text-sm text-gray-400 leading-relaxed">
+                            المحرك الأساسي للحركة. تركيبه في الجهة اليسرى أو اليمنى يسمح للروبوت بالدوران والتحرك. 
+                            <span className="text-red-400 block mt-1 text-xs">ملاحظة: بدون محركات، لن يستجيب الروبوت لأوامر الحركة.</span>
+                        </p>
+                    </div>
+
+                    <div className="bg-primary p-5 rounded-lg border border-white/5 hover:border-accent/30 transition">
+                        <div className="flex items-center justify-between mb-2">
+                            <h3 className="font-bold text-white flex items-center gap-2">
+                                <span className="p-1 bg-blue-500/20 text-blue-500 rounded"><Activity size={16} /></span>
+                                حساس مسافة (Ultrasonic)
+                            </h3>
+                            <span className="text-xs font-mono text-gray-400 border border-white/10 px-2 py-1 rounded">1⚡ / tick</span>
+                        </div>
+                        <p className="text-sm text-gray-400 leading-relaxed">
+                            يقيس المسافة أمام الروبوت باستخدام الموجات الصوتية. مداه قصير نسبياً (حتى 5 مربعات) ولكنه يستهلك طاقة قليلة.
+                        </p>
+                    </div>
+
+                    <div className="bg-primary p-5 rounded-lg border border-white/5 hover:border-accent/30 transition">
+                        <div className="flex items-center justify-between mb-2">
+                            <h3 className="font-bold text-white flex items-center gap-2">
+                                <span className="p-1 bg-red-500/20 text-red-500 rounded"><Wrench size={16} /></span>
+                                ماسح ليزر (Lidar)
+                            </h3>
+                            <span className="text-xs font-mono text-gray-400 border border-white/10 px-2 py-1 rounded">3⚡ / tick</span>
+                        </div>
+                        <p className="text-sm text-gray-400 leading-relaxed">
+                            يوفر قراءات دقيقة جداً للمسافات البعيدة (حتى 10 مربعات). مفيد لرسم الخرائط ولكنه يستهلك طاقة أعلى من حساس المسافة العادي.
+                        </p>
+                    </div>
+                </div>
+            </article>
+          )}
+
           {activeSection === 'ai' && (
               <article className="animate-in fade-in duration-300">
                   <h1 className="text-3xl font-bold text-white mb-6">تكامل الذكاء الاصطناعي</h1>
@@ -202,6 +269,38 @@ const Docs: React.FC = () => {
               </article>
           )}
 
+          {activeSection === 'troubleshooting' && (
+            <article className="animate-in fade-in duration-300">
+                <h1 className="text-3xl font-bold text-white mb-6">استكشاف الأخطاء وإصلاحها</h1>
+                
+                <div className="space-y-6">
+                    <div className="border-l-4 border-red-500 pl-4 py-1">
+                        <h3 className="text-white font-bold text-lg mb-2">الروبوت لا يتحرك رغم تشغيل الكود</h3>
+                        <p className="text-gray-400 text-sm mb-2">الأسباب المحتملة:</p>
+                        <ul className="list-disc list-inside text-gray-500 text-sm space-y-1">
+                            <li>لم تقم بتركيب محركات (Servos) في منافذ اليمين أو اليسار.</li>
+                            <li>البطارية نفدت (0%).</li>
+                            <li>هناك عائق (Obstacle) مباشرة أمام الروبوت.</li>
+                        </ul>
+                    </div>
+
+                    <div className="border-l-4 border-yellow-500 pl-4 py-1">
+                        <h3 className="text-white font-bold text-lg mb-2">ظهور رسالة "COLLISION DETECTED"</h3>
+                        <p className="text-gray-400 text-sm">
+                            هذا يعني أن الروبوت اصطدم بجدار أو عائق. يؤدي الاصطدام إلى استنزاف سريع للبطارية (-5%). تأكد من استخدام حساس المسافة لتجنب العوائق برمجياً.
+                        </p>
+                    </div>
+
+                    <div className="border-l-4 border-blue-500 pl-4 py-1">
+                        <h3 className="text-white font-bold text-lg mb-2">المولد الذكي (AI) لا يعمل</h3>
+                        <p className="text-gray-400 text-sm">
+                            تأكد من اتصالك بالإنترنت. يعتمد المولد على خوادم Google Cloud لمعالجة النصوص. إذا استمرت المشكلة، حاول صياغة الأمر بشكل أبسط (مثال: "تحرك للأمام" بدلاً من "انطلق يا بطل").
+                        </p>
+                    </div>
+                </div>
+            </article>
+          )}
+
           {activeSection === 'api' && (
               <article className="animate-in fade-in duration-300">
                   <h1 className="text-3xl font-bold text-white mb-6">API Reference</h1>
@@ -212,32 +311,4 @@ const Docs: React.FC = () => {
                   <h3 className="text-xl font-bold text-white mb-4">Endpoint: Execute Command</h3>
                   <div className="bg-[#1e1e1e] rounded-xl overflow-hidden border border-white/10 font-mono text-sm mb-8">
                       <div className="bg-black/50 p-3 border-b border-white/5 flex items-center gap-3">
-                          <span className="bg-green-500/20 text-green-400 px-2 py-0.5 rounded text-xs font-bold">POST</span>
-                          <span className="text-gray-300">https://api.mulaqqen.com/v1/robot/execute</span>
-                      </div>
-                      <div className="p-6 text-gray-300">
-                          <div className="text-gray-500 mb-2">// Request Body</div>
-                          <pre>{`{
-  "robot_id": "bot_12345",
-  "commands": ["FORWARD", "TURN_LEFT"],
-  "sync": true
-}`}</pre>
-                          <div className="text-gray-500 mt-6 mb-2">// Response (200 OK)</div>
-                          <pre>{`{
-  "status": "success",
-  "battery_remaining": 89,
-  "position": { "x": 4, "y": 2 }
-}`}</pre>
-                      </div>
-                  </div>
-              </article>
-          )}
-
-        </div>
-
-      </div>
-    </div>
-  );
-};
-
-export default Docs;
+                          <span className
