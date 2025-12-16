@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Play, Pause, RotateCcw, Send, Terminal, Battery, Thermometer, Activity, Bot, Sparkles, FileCode, Loader2, Wrench, Cpu, Zap, ArrowUp, ArrowDown, ArrowLeft, ArrowRight, Package, X, Flag, Trophy, AlertTriangle, ChevronsRight, Plus, MessageSquare, HelpCircle, Trash2, Wand2, Copy, LayoutDashboard, MousePointer2 } from 'lucide-react';
+import { Play, Pause, RotateCcw, Send, Terminal, Battery, Thermometer, Activity, Bot, Sparkles, FileCode, Loader2, Wrench, Cpu, Zap, ArrowUp, ArrowDown, ArrowLeft, ArrowRight, Package, X, Flag, Trophy, AlertTriangle, ChevronsRight, Plus, MessageSquare, HelpCircle, Trash2, Wand2, Copy, LayoutDashboard, MousePointer2, GripHorizontal } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { SimulationEngine } from '../services/simulationEngine';
 import { streamAssistantHelp, translateCommands } from '../services/geminiService';
@@ -229,6 +229,10 @@ const Simulator: React.FC = () => {
     e.dataTransfer.effectAllowed = 'copy';
   };
 
+  const handleDragEnd = () => {
+    setDraggedItem(null);
+  };
+
   const handleDrop = (e: React.DragEvent, slot: 'front' | 'back' | 'left' | 'right') => {
     e.preventDefault();
     const componentId = e.dataTransfer.getData('componentId');
@@ -419,41 +423,57 @@ const Simulator: React.FC = () => {
 
   const renderDropZone = (slot: 'front' | 'back' | 'left' | 'right', label: string, icon: React.ReactNode) => {
     const component = robotConfig.slots[slot];
+    // Visual cue for drag target: if we are dragging something, highlight empty slots
+    const isTarget = draggedItem && !component;
+    
     return (
         <div 
             onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'copy'; }}
             onDrop={(e) => handleDrop(e, slot)}
-            className={`relative flex flex-col items-center justify-center rounded-xl border-2 border-dashed transition-all duration-300 h-24 w-24 group
+            className={`relative flex flex-col items-center justify-center rounded-xl transition-all duration-300 h-24 w-24 group z-20
                 ${component 
-                    ? 'border-accent bg-accent/10 shadow-[0_0_15px_rgba(45,137,229,0.15)]' 
-                    : 'border-white/10 bg-white/5 hover:border-white/30 hover:bg-white/10'
+                    ? 'border-2 border-accent bg-secondary shadow-[0_0_20px_rgba(45,137,229,0.2)]' 
+                    : isTarget 
+                        ? 'border-2 border-dashed border-green-500/70 bg-green-500/10 scale-105 shadow-[0_0_15px_rgba(34,197,94,0.3)] animate-pulse'
+                        : 'border-2 border-dashed border-white/10 bg-black/40 hover:border-white/30 hover:bg-white/5'
                 }
             `}
         >
-            <div className={`absolute -top-3 px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider backdrop-blur-sm shadow-sm
-                 ${component ? 'bg-accent text-white' : 'bg-black border border-white/10 text-gray-500'}
+            <div className={`absolute -top-3 px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider backdrop-blur-sm shadow-sm z-30
+                 ${component ? 'bg-accent text-white' : isTarget ? 'bg-green-600 text-white' : 'bg-black border border-white/10 text-gray-500'}
             `}>
                 {label}
             </div>
 
+            {/* Connection Wire to Center */}
+            <div className={`absolute pointer-events-none -z-10 bg-white/10
+                ${slot === 'front' ? 'h-10 w-0.5 bottom-[-40px]' : ''}
+                ${slot === 'back' ? 'h-10 w-0.5 top-[-40px]' : ''}
+                ${slot === 'left' ? 'w-10 h-0.5 right-[-40px]' : ''}
+                ${slot === 'right' ? 'w-10 h-0.5 left-[-40px]' : ''}
+            `}></div>
+
             {component ? (
-                <>
+                <div key={component.id} className="relative w-full h-full flex flex-col items-center justify-center animate-in zoom-in-50 duration-300">
                    <button 
                       onClick={() => handleRemovePart(slot)}
-                      className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600 z-10 opacity-0 group-hover:opacity-100 transition-opacity"
+                      className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600 z-40 opacity-0 group-hover:opacity-100 transition-opacity shadow-lg"
                    >
                       <X size={10} />
                    </button>
-                   <div className="flex flex-col items-center text-center p-1 animate-in zoom-in-95">
-                      {component.type.includes('motor') ? <Zap size={24} className="text-yellow-400 mb-1" /> : 
-                       component.type.includes('camera') ? <Bot size={24} className="text-blue-400 mb-1" /> :
-                       <Activity size={24} className="text-green-400 mb-1" />}
+                   <div className="flex flex-col items-center text-center p-1">
+                      <div className="p-2 bg-white/10 rounded-full mb-1">
+                        {component.type.includes('motor') ? <Zap size={20} className="text-yellow-400" /> : 
+                         component.type.includes('camera') ? <Bot size={20} className="text-blue-400" /> :
+                         <Activity size={20} className="text-green-400" />}
+                      </div>
                       <span className="text-[9px] font-bold text-white leading-tight">{component.name}</span>
                    </div>
-                </>
+                </div>
             ) : (
-                <div className="text-gray-600 flex flex-col items-center opacity-40 group-hover:opacity-80 transition-opacity">
+                <div className={`flex flex-col items-center transition-opacity ${isTarget ? 'opacity-100 text-green-400' : 'opacity-30 text-gray-600 group-hover:opacity-60'}`}>
                     {icon}
+                    {isTarget && <span className="text-[8px] font-bold mt-1 uppercase tracking-widest">Drop Here</span>}
                 </div>
             )}
         </div>
@@ -793,7 +813,7 @@ const Simulator: React.FC = () => {
                         <div className="p-4 border-b border-white/10 bg-secondary/50">
                             <p className="text-xs text-gray-400 flex items-center gap-2">
                                 <Package size={14} className="text-accent" />
-                                اسحب القطع من الأسفل لتركيبها. تحتاج لمحركات للحركة!
+                                اسحب القطع من الأسفل إلى أماكنها المحددة.
                             </p>
                         </div>
 
@@ -801,54 +821,64 @@ const Simulator: React.FC = () => {
                         <div className="flex-1 p-6 flex flex-col items-center justify-center overflow-hidden relative bg-grid">
                             
                             <div className="relative animate-in zoom-in-95 duration-500">
-                                {/* Chassis Lines */}
-                                <div className="absolute top-1/2 left-0 w-full h-px bg-gradient-to-r from-transparent via-white/20 to-transparent"></div>
-                                <div className="absolute left-1/2 top-0 h-full w-px bg-gradient-to-b from-transparent via-white/20 to-transparent"></div>
+                                {/* Chassis Lines / Wires */}
+                                <div className="absolute top-1/2 left-0 w-full h-[2px] bg-gradient-to-r from-transparent via-white/10 to-transparent"></div>
+                                <div className="absolute left-1/2 top-0 h-full w-[2px] bg-gradient-to-b from-transparent via-white/10 to-transparent"></div>
 
                                 {/* Central Core */}
-                                <div className="w-28 h-28 bg-[#1A1E24] rounded-2xl border border-white/20 flex flex-col items-center justify-center z-10 relative shadow-[0_0_30px_rgba(0,0,0,0.5)]">
-                                    <Cpu size={32} className="text-white/80 mb-1" />
-                                    <span className="text-[10px] text-gray-500 font-mono tracking-widest">MULAQQEN V2</span>
+                                <div className="w-32 h-32 bg-[#1A1E24] rounded-2xl border-2 border-white/20 flex flex-col items-center justify-center z-10 relative shadow-[0_0_50px_rgba(0,0,0,0.5)]">
+                                    <Cpu size={40} className="text-white/80 mb-2" />
+                                    <span className="text-[10px] text-gray-500 font-mono tracking-widest uppercase">Central Unit</span>
                                     <div className="absolute top-2 right-2 flex gap-1">
                                         <div className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></div>
                                         <div className="w-1.5 h-1.5 bg-blue-500 rounded-full animate-pulse delay-75"></div>
                                     </div>
+                                    {/* Wire Connectors */}
+                                    <div className="absolute top-[-10px] left-1/2 -translate-x-1/2 w-8 h-2 bg-white/20 rounded"></div>
+                                    <div className="absolute bottom-[-10px] left-1/2 -translate-x-1/2 w-8 h-2 bg-white/20 rounded"></div>
+                                    <div className="absolute left-[-10px] top-1/2 -translate-y-1/2 h-8 w-2 bg-white/20 rounded"></div>
+                                    <div className="absolute right-[-10px] top-1/2 -translate-y-1/2 h-8 w-2 bg-white/20 rounded"></div>
                                 </div>
 
                                 {/* Drop Zones */}
-                                <div className="absolute -top-32 left-2">{renderDropZone('front', 'مقدمة', <ArrowUp size={20} />)}</div>
-                                <div className="absolute -bottom-32 left-2">{renderDropZone('back', 'مؤخرة', <ArrowDown size={20} />)}</div>
-                                <div className="absolute top-2 -left-32">{renderDropZone('left', 'محرك أيسر', <ArrowLeft size={20} />)}</div>
-                                <div className="absolute top-2 -right-32">{renderDropZone('right', 'محرك أيمن', <ArrowRight size={20} />)}</div>
+                                <div className="absolute -top-36 left-4">{renderDropZone('front', 'المقدمة', <ArrowUp size={24} />)}</div>
+                                <div className="absolute -bottom-36 left-4">{renderDropZone('back', 'المؤخرة', <ArrowDown size={24} />)}</div>
+                                <div className="absolute top-4 -left-36">{renderDropZone('left', 'محرك أيسر', <ArrowLeft size={24} />)}</div>
+                                <div className="absolute top-4 -right-36">{renderDropZone('right', 'محرك أيمن', <ArrowRight size={24} />)}</div>
                             </div>
                         </div>
 
                         {/* Inventory Drawer */}
-                        <div className="h-44 bg-[#15191E] border-t border-white/10 p-4">
-                             <div className="flex items-center justify-between mb-3">
-                                <h4 className="text-xs font-bold text-gray-400 uppercase flex items-center gap-2">
-                                    <Wrench size={12} /> المخزون
+                        <div className="h-48 bg-[#15191E] border-t border-white/10 flex flex-col shadow-[0_-5px_20px_rgba(0,0,0,0.3)]">
+                             <div className="flex items-center justify-between p-3 border-b border-white/5 bg-secondary/80">
+                                <h4 className="text-xs font-bold text-gray-300 uppercase flex items-center gap-2">
+                                    <GripHorizontal size={14} className="text-gray-500" />
+                                    صندوق القطع
                                 </h4>
-                                <span className="text-[10px] text-gray-500 bg-white/5 px-2 py-0.5 rounded">
-                                    الاستهلاك: <span className="text-white font-bold">{[robotConfig.slots.front, robotConfig.slots.back, robotConfig.slots.left, robotConfig.slots.right].reduce((acc, slot) => acc + (slot?.powerConsumption || 0), 0) + 0.5}</span> واط
+                                <span className="text-[10px] text-gray-500 bg-black/40 px-2 py-1 rounded border border-white/5">
+                                    Total Power: <span className="text-white font-bold">{[robotConfig.slots.front, robotConfig.slots.back, robotConfig.slots.left, robotConfig.slots.right].reduce((acc, slot) => acc + (slot?.powerConsumption || 0), 0) + 0.5} W</span>
                                 </span>
                              </div>
-                             <div className="flex gap-3 overflow-x-auto pb-2 custom-scrollbar">
+                             <div className="flex gap-4 overflow-x-auto p-4 custom-scrollbar flex-1 items-center">
                                 {AVAILABLE_COMPONENTS.map(component => (
                                     <div 
                                         key={component.id}
                                         draggable
                                         onDragStart={(e) => handleDragStart(e, component)}
-                                        className="flex-shrink-0 w-24 bg-[#0F1216] border border-white/10 rounded-xl p-3 cursor-grab hover:border-accent hover:shadow-[0_0_15px_rgba(45,137,229,0.15)] transition-all active:cursor-grabbing flex flex-col items-center text-center group"
+                                        onDragEnd={handleDragEnd}
+                                        className="flex-shrink-0 w-28 h-28 bg-[#0F1216] border border-white/10 rounded-xl p-3 cursor-grab hover:border-accent hover:shadow-[0_0_15px_rgba(45,137,229,0.15)] transition-all active:cursor-grabbing flex flex-col items-center justify-center text-center group hover:-translate-y-1 relative overflow-hidden"
                                     >
-                                        <div className="mb-2 text-gray-500 group-hover:text-white transition-colors bg-white/5 p-2 rounded-lg">
-                                            {component.type.includes('motor') ? <Zap size={18} /> : 
-                                             component.type.includes('camera') ? <Bot size={18} /> :
-                                             <Activity size={18} />}
+                                        <div className="absolute top-0 right-0 p-1.5 opacity-50">
+                                           {component.type.includes('motor') && <Zap size={10} className="text-yellow-500" />}
+                                        </div>
+                                        <div className="mb-2 text-gray-400 group-hover:text-white transition-colors bg-white/5 p-2.5 rounded-lg group-hover:bg-accent/20">
+                                            {component.type.includes('motor') ? <Zap size={20} /> : 
+                                             component.type.includes('camera') ? <Bot size={20} /> :
+                                             <Activity size={20} />}
                                         </div>
                                         <span className="text-[10px] font-bold text-gray-300 leading-tight mb-1">{component.name}</span>
-                                        <div className="mt-auto flex items-center gap-1">
-                                            <span className="text-[9px] font-mono text-gray-500">{component.powerConsumption}⚡</span>
+                                        <div className="mt-1 flex items-center gap-1 bg-white/5 px-1.5 py-0.5 rounded text-[9px]">
+                                            <span className="font-mono text-gray-500">{component.powerConsumption}W</span>
                                         </div>
                                     </div>
                                 ))}
