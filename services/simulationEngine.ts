@@ -67,6 +67,7 @@ export class SimulationEngine {
          if (this.isValidPosition(nextX, nextY)) {
            if (this.gridMap[nextY][nextX] === 'obstacle') {
              logs.push("CRITICAL: COLLISION DETECTED!");
+             logs.push("COLLISION_IMPACT");
              this.state.battery -= 5; // Impact penalty
              collisionDetected = true;
            } else {
@@ -75,7 +76,10 @@ export class SimulationEngine {
              moved = true;
            }
          } else {
-           logs.push("WARNING: Boundary reached.");
+           logs.push("CRITICAL: COLLISION (Boundary)!");
+           logs.push("COLLISION_IMPACT");
+           this.state.battery -= 2;
+           collisionDetected = true;
          }
        }
     } else if (command === RobotCommand.TURN_RIGHT) {

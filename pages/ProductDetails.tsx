@@ -1,14 +1,75 @@
-
-import React from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { PRODUCTS } from '../data/products';
-import { ArrowRight, ShoppingCart, Check, Star, Shield, Truck, RotateCcw } from 'lucide-react';
+import { ArrowRight, ShoppingCart, Check, Star, Shield, Truck, RotateCcw, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 
 const ProductDetails: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const product = PRODUCTS.find((p) => p.id === id);
   const { addToCart } = useCart();
+
+  // Gallery State
+  const [gallery, setGallery] = useState<string[]>([]);
+  const [selectedImage, setSelectedImage] = useState<string>('');
+  
+  // Image Loading
+  useEffect(() => {
+    if (product) {
+        // Mock gallery images based on product ID to keep them consistent
+        const images = [
+            product.image,
+            `https://picsum.photos/800/800?random=${product.id}-1`,
+            `https://picsum.photos/800/800?random=${product.id}-2`,
+            `https://picsum.photos/800/800?random=${product.id}-3`,
+            `https://picsum.photos/800/800?random=${product.id}-4`,
+            `https://picsum.photos/800/800?random=${product.id}-5`,
+        ];
+        setGallery(images);
+        setSelectedImage(images[0]);
+    }
+  }, [product]);
+
+  // Zoom Logic
+  const [isHovering, setIsHovering] = useState(false);
+  const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
+  const imgContainerRef = useRef<HTMLDivElement>(null);
+
+  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!imgContainerRef.current) return;
+    const { left, top, width, height } = imgContainerRef.current.getBoundingClientRect();
+    
+    // Calculate percentage position
+    let x = ((e.clientX - left) / width) * 100;
+    let y = ((e.clientY - top) / height) * 100;
+    
+    // Clamp values
+    x = Math.max(0, Math.min(100, x));
+    y = Math.max(0, Math.min(100, y));
+
+    setMousePos({ x, y });
+    setIsHovering(true);
+  };
+
+  const handleMouseLeave = () => {
+    setIsHovering(false);
+  };
+
+  // Thumbnail Carousel Logic
+  const [scrollIndex, setScrollIndex] = useState(0);
+  const THUMBNAILS_PER_VIEW = 4;
+
+  const nextThumbnails = () => {
+     if (scrollIndex + THUMBNAILS_PER_VIEW < gallery.length) {
+         setScrollIndex(prev => prev + 1);
+     }
+  };
+
+  const prevThumbnails = () => {
+     if (scrollIndex > 0) {
+         setScrollIndex(prev => prev - 1);
+     }
+  };
 
   if (!product) {
     return (
@@ -37,20 +98,80 @@ const ProductDetails: React.FC = () => {
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
           {/* Image Gallery */}
-          <div className="space-y-4">
-            <div className="aspect-square rounded-2xl overflow-hidden border border-white/10 bg-secondary shadow-2xl">
+          <div className="space-y-4 select-none">
+            {/* Main Image Viewport */}
+            <div 
+                ref={imgContainerRef}
+                className="aspect-square rounded-2xl overflow-hidden border border-white/10 bg-secondary shadow-2xl relative cursor-crosshair group z-10"
+                onMouseMove={handleMouseMove}
+                onMouseLeave={handleMouseLeave}
+            >
               <img 
-                src={product.image} 
+                src={selectedImage || product.image} 
                 alt={product.name} 
-                className="w-full h-full object-cover"
+                className="w-full h-full object-cover transition-transform duration-200 ease-out pointer-events-none"
+                style={{
+                    transformOrigin: `${mousePos.x}% ${mousePos.y}%`,
+                    transform: isHovering ? 'scale(1.5)' : 'scale(1)'
+                }}
               />
+              
+              {/* Zoom Hint */}
+              {!isHovering && (
+                  <div className="absolute bottom-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none">
+                      <span className="bg-black/60 backdrop-blur-md text-white text-[10px] px-2 py-1 rounded border border-white/10 flex items-center gap-1">
+                          <Check size={10} /> Hover to Zoom
+                      </span>
+                  </div>
+              )}
             </div>
-            <div className="grid grid-cols-4 gap-4">
-              {[1, 2, 3, 4].map((i) => (
-                <div key={i} className="aspect-square rounded-lg overflow-hidden border border-white/10 bg-secondary cursor-pointer hover:border-accent transition">
-                   <img src={`https://picsum.photos/200/200?random=${product.id}${i}`} alt="" className="w-full h-full object-cover opacity-70 hover:opacity-100 transition" />
-                </div>
-              ))}
+
+            {/* Thumbnail Carousel */}
+            <div className="relative group/thumbs">
+                 {/* Prev Button */}
+                 <button 
+                    onClick={prevThumbnails}
+                    disabled={scrollIndex === 0}
+                    className="absolute left-0 top-1/2 -translate-y-1/2 z-20 bg-black/70 hover:bg-accent text-white p-1.5 rounded-r border-y border-r border-white/10 disabled:opacity-0 disabled:pointer-events-none transition-all shadow-lg backdrop-blur-sm transform -translate-x-2 group-hover/thumbs:translate-x-0"
+                 >
+                    <ChevronLeft size={16} />
+                 </button>
+
+                 <div className="overflow-hidden -mx-2 py-1">
+                     <div 
+                        className="flex transition-transform duration-300 ease-out"
+                        style={{ transform: `translateX(-${scrollIndex * (100 / THUMBNAILS_PER_VIEW)}%)` }}
+                     >
+                        {gallery.map((img, idx) => (
+                            <div 
+                                key={idx} 
+                                className="flex-shrink-0 px-2"
+                                style={{ width: `${100 / THUMBNAILS_PER_VIEW}%` }}
+                            >
+                                <div 
+                                    onClick={() => setSelectedImage(img)}
+                                    className={`aspect-square rounded-xl overflow-hidden border cursor-pointer transition-all duration-200 relative
+                                        ${selectedImage === img 
+                                            ? 'border-accent ring-2 ring-accent ring-offset-2 ring-offset-[#0F1216] opacity-100 scale-[0.98]' 
+                                            : 'border-white/10 opacity-60 hover:opacity-100 hover:border-white/30 hover:scale-105'
+                                        }
+                                    `}
+                                >
+                                    <img src={img} alt="" className="w-full h-full object-cover" />
+                                </div>
+                            </div>
+                        ))}
+                     </div>
+                 </div>
+
+                 {/* Next Button */}
+                 <button 
+                    onClick={nextThumbnails}
+                    disabled={scrollIndex + THUMBNAILS_PER_VIEW >= gallery.length}
+                    className="absolute right-0 top-1/2 -translate-y-1/2 z-20 bg-black/70 hover:bg-accent text-white p-1.5 rounded-l border-y border-l border-white/10 disabled:opacity-0 disabled:pointer-events-none transition-all shadow-lg backdrop-blur-sm transform translate-x-2 group-hover/thumbs:translate-x-0"
+                 >
+                    <ChevronRight size={16} />
+                 </button>
             </div>
           </div>
 
@@ -100,17 +221,17 @@ const ProductDetails: React.FC = () => {
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-               <div className="flex flex-col items-center text-center p-4 bg-white/5 rounded-xl border border-white/5">
+               <div className="flex flex-col items-center text-center p-4 bg-white/5 rounded-xl border border-white/5 hover:bg-white/10 transition">
                   <Shield className="text-highlight mb-2" size={24} />
                   <span className="text-white text-sm font-bold">ضمان سنتين</span>
                   <span className="text-gray-500 text-xs">على العيوب المصنعية</span>
                </div>
-               <div className="flex flex-col items-center text-center p-4 bg-white/5 rounded-xl border border-white/5">
+               <div className="flex flex-col items-center text-center p-4 bg-white/5 rounded-xl border border-white/5 hover:bg-white/10 transition">
                   <Truck className="text-highlight mb-2" size={24} />
                   <span className="text-white text-sm font-bold">شحن سريع</span>
                   <span className="text-gray-500 text-xs">خلال 3-5 أيام عمل</span>
                </div>
-               <div className="flex flex-col items-center text-center p-4 bg-white/5 rounded-xl border border-white/5">
+               <div className="flex flex-col items-center text-center p-4 bg-white/5 rounded-xl border border-white/5 hover:bg-white/10 transition">
                   <RotateCcw className="text-highlight mb-2" size={24} />
                   <span className="text-white text-sm font-bold">استرجاع مجاني</span>
                   <span className="text-gray-500 text-xs">خلال 14 يوم</span>
@@ -122,10 +243,10 @@ const ProductDetails: React.FC = () => {
 
         {/* Additional Tabs/Info */}
         <div className="mt-16">
-           <div className="border-b border-white/10 flex gap-8 mb-8">
-              <button className="pb-4 text-accent font-bold border-b-2 border-accent">الوصف التفصيلي</button>
-              <button className="pb-4 text-gray-400 hover:text-white transition">المواصفات التقنية</button>
-              <button className="pb-4 text-gray-400 hover:text-white transition">التقييمات</button>
+           <div className="border-b border-white/10 flex gap-8 mb-8 overflow-x-auto">
+              <button className="pb-4 text-accent font-bold border-b-2 border-accent whitespace-nowrap">الوصف التفصيلي</button>
+              <button className="pb-4 text-gray-400 hover:text-white transition whitespace-nowrap">المواصفات التقنية</button>
+              <button className="pb-4 text-gray-400 hover:text-white transition whitespace-nowrap">التقييمات</button>
            </div>
            <div className="text-gray-300 leading-relaxed space-y-4">
               <p>

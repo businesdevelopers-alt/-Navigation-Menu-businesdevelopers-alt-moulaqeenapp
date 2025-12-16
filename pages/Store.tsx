@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ShoppingCart, Search, Filter, X, DollarSign, Eye, Check, Zap, Cpu, Settings, Star, ArrowRight } from 'lucide-react';
+import { ShoppingCart, Search, Filter, X, DollarSign, Eye, Check, Zap, Cpu, Settings, Star, ArrowRight, Package, Heart } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
 import { PRODUCTS } from '../data/products';
@@ -35,9 +35,9 @@ const Store: React.FC = () => {
   });
 
   const categories = [
-    { id: 'kit', label: 'أطقم تعليمية', icon: Cpu },
-    { id: 'sensor', label: 'مستشعرات', icon: Zap },
-    { id: 'part', label: 'قطع غيار', icon: Settings },
+    { id: 'kit', label: 'أطقم تعليمية', icon: Cpu, color: 'text-purple-400' },
+    { id: 'sensor', label: 'مستشعرات', icon: Zap, color: 'text-cyan-400' },
+    { id: 'part', label: 'قطع غيار', icon: Settings, color: 'text-orange-400' },
   ];
 
   const toggleCategory = (id: 'kit' | 'sensor' | 'part') => {
@@ -64,7 +64,7 @@ const Store: React.FC = () => {
                   <select 
                     value={sortBy}
                     onChange={(e) => setSortBy(e.target.value as any)}
-                    className="w-full bg-secondary border border-white/10 text-white text-sm rounded-lg px-4 py-3 focus:outline-none focus:border-accent cursor-pointer appearance-none hover:bg-white/5 transition shadow-sm"
+                    className="w-full bg-secondary border border-white/10 text-white text-sm rounded-lg px-4 py-3 focus:outline-none focus:border-accent cursor-pointer appearance-none hover:bg-white/5 transition shadow-sm font-bold"
                   >
                       <option value="relevance">ترتيب مقترح</option>
                       <option value="price_asc">الأقل سعراً</option>
@@ -102,8 +102,8 @@ const Store: React.FC = () => {
              
              {/* Category Filter */}
              <div className="bg-secondary/50 backdrop-blur-sm border border-white/5 rounded-xl p-5 shadow-inner">
-                <h3 className="text-white font-bold mb-4 flex items-center gap-2 text-sm uppercase tracking-wider">
-                   <Filter size={14} className="text-accent" />
+                <h3 className="text-white font-bold mb-4 flex items-center gap-2 text-xs uppercase tracking-wider opacity-70">
+                   <Filter size={14} />
                    التصنيف
                 </h3>
                 <div className="space-y-2">
@@ -111,18 +111,23 @@ const Store: React.FC = () => {
                     <button
                         key={cat.id}
                         onClick={() => toggleCategory(cat.id as any)}
-                        className={`w-full text-right px-3 py-3 rounded-lg text-xs font-bold transition-all duration-200 flex items-center justify-between group
+                        className={`w-full text-right px-3 py-3 rounded-lg text-xs font-bold transition-all duration-200 flex items-center justify-between group relative overflow-hidden
                           ${selectedCategories.includes(cat.id as any) 
-                            ? 'bg-accent/10 text-accent border border-accent/20' 
-                            : 'text-gray-400 bg-primary/50 border border-transparent hover:bg-white/5 hover:text-white hover:border-white/10'
+                            ? 'bg-white/5 text-white border border-white/10' 
+                            : 'text-gray-400 bg-transparent border border-transparent hover:bg-white/5 hover:text-white'
                           }
                         `}
                       >
-                        <div className="flex items-center gap-2">
-                            <cat.icon size={14} className={`transition-colors ${selectedCategories.includes(cat.id as any) ? 'text-accent' : 'text-gray-500 group-hover:text-white'}`} />
+                        <div className="flex items-center gap-3 relative z-10">
+                            <cat.icon size={16} className={`transition-colors ${selectedCategories.includes(cat.id as any) ? cat.color : 'text-gray-600 group-hover:text-gray-300'}`} />
                             {cat.label}
                         </div>
-                        {selectedCategories.includes(cat.id as any) && <Check size={14} className="text-accent" />}
+                        {selectedCategories.includes(cat.id as any) && (
+                           <span className="w-1.5 h-1.5 rounded-full bg-accent animate-pulse"></span>
+                        )}
+                        {selectedCategories.includes(cat.id as any) && (
+                            <div className="absolute left-0 top-0 bottom-0 w-0.5 bg-accent"></div>
+                        )}
                       </button>
                   ))}
                 </div>
@@ -130,23 +135,24 @@ const Store: React.FC = () => {
 
              {/* Price Filter */}
              <div className="bg-secondary/50 backdrop-blur-sm border border-white/5 rounded-xl p-5 shadow-inner">
-                <h3 className="text-white font-bold mb-4 flex items-center gap-2 text-sm uppercase tracking-wider">
-                   <DollarSign size={14} className="text-accent" />
-                   السعر
+                <h3 className="text-white font-bold mb-4 flex items-center gap-2 text-xs uppercase tracking-wider opacity-70">
+                   <DollarSign size={14} />
+                   نطاق السعر
                 </h3>
                 <div className="space-y-2">
                   {priceRanges.map(range => (
                       <button
                         key={range.id}
                         onClick={() => setSelectedPriceRange(range.id)}
-                        className={`w-full text-right px-3 py-2.5 rounded-lg text-xs font-medium transition-all duration-200 flex items-center justify-between
+                        className={`w-full text-right px-3 py-2.5 rounded-lg text-xs font-medium transition-all duration-200 flex items-center justify-between group
                           ${selectedPriceRange === range.id 
-                            ? 'bg-white/10 text-white border-r-2 border-accent pl-3' 
-                            : 'text-gray-400 hover:text-white hover:bg-white/5'
+                            ? 'bg-accent/10 text-accent pl-3 border border-accent/20' 
+                            : 'text-gray-400 border border-transparent hover:border-white/5 hover:text-white hover:bg-white/5'
                           }
                         `}
                       >
                         {range.label}
+                        {selectedPriceRange === range.id && <Check size={12} />}
                       </button>
                   ))}
                 </div>
@@ -158,88 +164,93 @@ const Store: React.FC = () => {
             {filteredProducts.length > 0 ? (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                 {filteredProducts.map((product) => (
-                  <div key={product.id} className="group relative bg-[#1A1E24] rounded-2xl border border-white/5 hover:border-accent/40 transition-all duration-500 hover:shadow-[0_0_30px_rgba(45,137,229,0.15)] hover:-translate-y-2 overflow-hidden flex flex-col h-full">
+                  <div key={product.id} className="group relative bg-[#1A1E24] rounded-2xl border border-white/5 overflow-hidden hover:border-accent/30 transition-all duration-300 hover:shadow-2xl hover:shadow-black/50 hover:-translate-y-1 flex flex-col h-full">
                     
-                    {/* Image Area */}
-                    <div className="relative aspect-[4/3] overflow-hidden bg-black/20 group-hover:bg-black/40 transition-colors">
-                        {/* Badge */}
-                        <div className="absolute top-3 right-3 z-10">
-                          <span className={`px-3 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-wider backdrop-blur-md shadow-lg border
-                            ${product.category === 'kit' ? 'bg-purple-500/20 text-purple-200 border-purple-500/30' : 
-                              product.category === 'sensor' ? 'bg-cyan-500/20 text-cyan-200 border-cyan-500/30' : 
-                              'bg-amber-500/20 text-amber-200 border-amber-500/30'}
-                          `}>
-                            {product.category === 'kit' ? 'KIT' : product.category === 'sensor' ? 'SENSOR' : 'PART'}
-                          </span>
-                        </div>
-
+                    {/* Image Container */}
+                    <div className="relative aspect-square overflow-hidden bg-black/20">
                         <img 
-                          src={product.image} 
-                          alt={product.name} 
-                          className="w-full h-full object-cover transition-transform duration-700 ease-in-out group-hover:scale-110 group-hover:rotate-1"
+                            src={product.image} 
+                            alt={product.name} 
+                            className="w-full h-full object-cover transition-transform duration-700 ease-out group-hover:scale-110 opacity-90 group-hover:opacity-100"
                         />
                         
-                        {/* Dark Gradient Overlay */}
-                        <div className="absolute inset-0 bg-gradient-to-t from-[#1A1E24] via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+                        {/* Gradient Overlay */}
+                        <div className="absolute inset-0 bg-gradient-to-t from-[#1A1E24] via-transparent to-transparent opacity-0 group-hover:opacity-40 transition-opacity duration-300" />
 
-                        {/* Quick Action Overlay (Floating) */}
-                        <div className="absolute bottom-4 inset-x-4 flex gap-3 translate-y-10 opacity-0 group-hover:translate-y-0 group-hover:opacity-100 transition-all duration-300 delay-75">
+                        {/* Floating Badges */}
+                        <div className="absolute top-3 left-3 flex gap-2 z-10">
+                            <span className={`backdrop-blur-md px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider border flex items-center gap-1.5 shadow-sm
+                                ${product.category === 'kit' ? 'bg-purple-500/20 text-purple-200 border-purple-500/30' : 
+                                  product.category === 'sensor' ? 'bg-cyan-500/20 text-cyan-200 border-cyan-500/30' : 
+                                  'bg-orange-500/20 text-orange-200 border-orange-500/30'}
+                            `}>
+                                {product.category === 'kit' ? <Cpu size={10} /> : product.category === 'sensor' ? <Zap size={10} /> : <Settings size={10} />}
+                                {product.category === 'kit' ? 'طقم تعليمي' : product.category === 'sensor' ? 'مستشعر' : 'قطعة غيار'}
+                            </span>
+                        </div>
+
+                        {/* Quick Actions Overlay */}
+                        <div className="absolute inset-0 z-20 flex items-center justify-center gap-3 opacity-0 group-hover:opacity-100 transition-all duration-300 backdrop-blur-[2px] bg-black/20">
                             <button 
                                 onClick={(e) => {
                                   e.preventDefault();
                                   setQuickViewProduct(product);
                                 }}
-                                className="bg-white/10 backdrop-blur-md border border-white/20 text-white p-3 rounded-xl hover:bg-white/20 hover:scale-105 transition-all tooltip shadow-lg"
+                                className="w-11 h-11 rounded-full bg-white/10 backdrop-blur-md border border-white/20 text-white flex items-center justify-center hover:bg-white hover:text-black transition-all transform translate-y-4 group-hover:translate-y-0 duration-300 delay-75 shadow-lg scale-90 hover:scale-100"
                                 title="نظرة سريعة"
                             >
-                                <Eye size={20} />
+                                <Eye size={18} />
                             </button>
                             <button 
                               onClick={(e) => {
                                 e.preventDefault();
                                 addToCart(product);
                               }}
-                              className="flex-1 bg-accent/90 backdrop-blur-md text-white p-3 rounded-xl font-bold text-xs flex items-center justify-center gap-2 hover:bg-accent hover:scale-[1.02] transition-all shadow-lg border border-accent/20"
+                              className="w-11 h-11 rounded-full bg-accent text-white flex items-center justify-center hover:bg-accentHover transition-all transform translate-y-4 group-hover:translate-y-0 duration-300 delay-100 shadow-lg scale-90 hover:scale-100"
+                              title="أضف للسلة"
                             >
                               <ShoppingCart size={18} />
-                              أضف للسلة
                             </button>
                         </div>
                     </div>
 
-                    {/* Content Area */}
+                    {/* Content */}
                     <div className="p-5 flex flex-col flex-1 relative">
-                        <Link to={`/store/product/${product.id}`} className="block mb-1">
-                           <h3 className="text-lg font-bold text-white group-hover:text-accent transition-colors line-clamp-1">
-                             {product.name}
-                           </h3>
-                        </Link>
-                        
-                        <div className="flex items-center gap-1 mb-3">
-                            {[1,2,3,4,5].map(i => (
-                                <Star key={i} size={12} className={`${i <= 4 ? 'text-yellow-400 fill-yellow-400' : 'text-gray-600'} `} />
-                            ))}
-                            <span className="text-[10px] text-gray-500 mr-2">(4.8)</span>
+                        {/* Decorative background accent */}
+                        <div className="absolute top-0 right-0 w-20 h-20 bg-accent/5 rounded-bl-full -z-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none"></div>
+
+                        <div className="relative z-10 flex-1">
+                            <Link to={`/store/product/${product.id}`} className="group-hover:text-accent transition-colors duration-200 block mb-2">
+                                <h3 className="text-white font-bold text-lg leading-tight line-clamp-2">{product.name}</h3>
+                            </Link>
+
+                            <div className="flex items-center gap-1 mb-3">
+                                {[1,2,3,4,5].map(i => (
+                                    <Star key={i} size={11} className={`${i <= 4 ? 'text-yellow-400 fill-yellow-400' : 'text-gray-700'}`} />
+                                ))}
+                                <span className="text-[10px] text-gray-500 mr-1 font-mono">(24)</span>
+                            </div>
+
+                            <p className="text-gray-400 text-xs leading-relaxed line-clamp-2 mb-4 h-8 opacity-80 group-hover:opacity-100 transition-opacity">
+                                {product.description}
+                            </p>
                         </div>
-                        
-                        <p className="text-gray-400 text-xs leading-relaxed line-clamp-2 mb-4">
-                          {product.description}
-                        </p>
-                        
-                        <div className="mt-auto pt-4 border-t border-white/5 flex items-center justify-between">
-                            <div className="flex flex-col">
-                                <span className="text-[10px] text-gray-500 font-mono uppercase mb-0.5">السعر الحالي</span>
+
+                        <div className="mt-4 pt-4 border-t border-white/5 flex items-center justify-between relative z-10">
+                            <div>
+                                <p className="text-[10px] text-gray-500 uppercase tracking-wider font-bold mb-0.5">السعر</p>
                                 <div className="flex items-baseline gap-1">
-                                    <span className="text-xl font-bold text-white font-mono group-hover:text-highlight transition-colors">{product.price}</span>
-                                    <span className="text-[10px] text-gray-400">ر.س</span>
+                                    <span className="text-xl font-bold text-white font-mono tracking-tight group-hover:text-highlight transition-colors">{product.price}</span>
+                                    <span className="text-xs text-gray-400 font-medium">ر.س</span>
                                 </div>
                             </div>
+                            
                             <Link 
                                 to={`/store/product/${product.id}`}
-                                className="text-[10px] font-bold text-gray-400 hover:text-white flex items-center gap-1 transition-colors group/link"
+                                className="px-4 py-2 rounded-lg bg-white/5 text-xs font-bold text-gray-300 hover:text-white hover:bg-white/10 border border-white/5 hover:border-white/20 transition-all flex items-center gap-1.5"
                             >
                                 التفاصيل
-                                <ArrowRight size={12} className="transition-transform group-hover/link:-translate-x-1" />
+                                <ArrowRight size={14} />
                             </Link>
                         </div>
                     </div>
@@ -248,14 +259,14 @@ const Store: React.FC = () => {
               </div>
             ) : (
               <div className="flex flex-col items-center justify-center py-20 bg-secondary/30 border border-white/5 rounded-2xl text-center border-dashed">
-                 <div className="w-20 h-20 bg-white/5 rounded-full flex items-center justify-center mb-6 text-gray-500 animate-pulse">
-                    <Search size={40} />
+                 <div className="w-16 h-16 bg-white/5 rounded-full flex items-center justify-center mb-6 text-gray-500 animate-pulse">
+                    <Package size={32} />
                  </div>
-                 <h3 className="text-2xl font-bold text-white mb-2">لا توجد نتائج مطابقة</h3>
-                 <p className="text-gray-400 text-sm max-w-xs mx-auto mb-8 leading-relaxed">
-                   لم نعثر على أي منتجات تطابق بحثك الحالي. حاول تغيير الكلمات المفتاحية أو إزالة الفلاتر.
+                 <h3 className="text-xl font-bold text-white mb-2">لا توجد نتائج مطابقة</h3>
+                 <p className="text-gray-400 text-sm max-w-xs mx-auto mb-6 leading-relaxed">
+                   حاول البحث بكلمات مختلفة أو تغيير الفلاتر للحصول على نتائج أفضل.
                  </p>
-                 <button onClick={() => {setSearchTerm(''); setSelectedCategories([]); setSelectedPriceRange('all');}} className="bg-primary hover:bg-white/5 text-white px-6 py-2 rounded-full text-sm font-bold border border-white/10 transition-all hover:border-accent">
+                 <button onClick={() => {setSearchTerm(''); setSelectedCategories([]); setSelectedPriceRange('all');}} className="px-5 py-2 rounded-lg bg-primary hover:bg-white/5 text-white text-xs font-bold border border-white/10 transition-all hover:border-accent">
                       مسح جميع الفلاتر
                  </button>
               </div>
@@ -267,68 +278,66 @@ const Store: React.FC = () => {
 
       {/* Modern Quick View Modal */}
       {quickViewProduct && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/90 backdrop-blur-sm" onClick={() => setQuickViewProduct(null)}>
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/90 backdrop-blur-md animate-in fade-in duration-200" onClick={() => setQuickViewProduct(null)}>
               <div 
-                  className="bg-[#15191E] border border-white/10 rounded-2xl max-w-4xl w-full shadow-2xl relative flex flex-col md:flex-row overflow-hidden animate-fade-in"
+                  className="bg-[#15191E] border border-white/10 rounded-2xl max-w-4xl w-full shadow-2xl relative flex flex-col md:flex-row overflow-hidden animate-in zoom-in-95 duration-200"
                   onClick={(e) => e.stopPropagation()}
               >
                   <button 
                       onClick={() => setQuickViewProduct(null)}
-                      className="absolute top-4 right-4 z-20 text-gray-400 hover:text-white bg-black/40 backdrop-blur-md p-2 rounded-full transition-all hover:rotate-90"
+                      className="absolute top-4 right-4 z-20 text-gray-400 hover:text-white bg-black/50 backdrop-blur-md p-2 rounded-full transition-all hover:rotate-90 border border-white/10"
                   >
-                      <X size={20} />
+                      <X size={16} />
                   </button>
 
                   {/* Image Side */}
-                  <div className="w-full md:w-1/2 relative bg-black">
+                  <div className="w-full md:w-1/2 relative bg-black group">
                        <img 
                           src={quickViewProduct.image} 
                           alt={quickViewProduct.name} 
-                          className="w-full h-full object-cover opacity-90"
+                          className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity duration-500"
                        />
-                       <div className="absolute inset-0 bg-gradient-to-t from-[#15191E] to-transparent opacity-60"></div>
+                       <div className="absolute inset-0 bg-gradient-to-t from-[#15191E] via-transparent to-transparent opacity-80"></div>
                   </div>
 
                   {/* Info Side */}
-                  <div className="w-full md:w-1/2 p-8 flex flex-col">
+                  <div className="w-full md:w-1/2 p-8 flex flex-col justify-center">
                        <div className="flex gap-2 mb-4">
-                           <span className={`px-3 py-1 rounded text-[10px] font-bold uppercase tracking-wider border 
+                           <span className={`px-2 py-1 rounded text-[10px] font-bold uppercase tracking-wider border 
                                 ${quickViewProduct.category === 'kit' ? 'border-purple-500/30 text-purple-400 bg-purple-500/5' : 
                                   quickViewProduct.category === 'sensor' ? 'border-sky-500/30 text-sky-400 bg-sky-500/5' : 
                                   'border-amber-500/30 text-amber-400 bg-amber-500/5'}
                            `}>
-                                {quickViewProduct.category === 'kit' ? 'Robotics Kit' : quickViewProduct.category === 'sensor' ? 'Electronic Sensor' : 'Spare Part'}
+                                {quickViewProduct.category}
                            </span>
                        </div>
                        
-                       <h2 className="text-3xl font-bold text-white mb-2 leading-tight">{quickViewProduct.name}</h2>
-                       <div className="flex items-baseline gap-2 mb-6">
-                            <span className="text-4xl font-mono font-bold text-highlight tracking-tighter">{quickViewProduct.price}</span>
+                       <h2 className="text-2xl md:text-3xl font-bold text-white mb-2 leading-tight">{quickViewProduct.name}</h2>
+                       <div className="flex items-baseline gap-2 mb-6 border-b border-white/5 pb-6">
+                            <span className="text-3xl font-mono font-bold text-highlight tracking-tighter">{quickViewProduct.price}</span>
                             <span className="text-sm text-gray-400">ر.س</span>
                        </div>
 
-                       <div className="bg-primary/50 p-4 rounded-lg border border-white/5 mb-8">
-                           <p className="text-gray-300 text-sm leading-relaxed">
-                              {quickViewProduct.description}
-                           </p>
+                       <div className="prose prose-invert prose-sm mb-8 text-gray-300">
+                          <p>{quickViewProduct.description}</p>
                        </div>
 
-                       <div className="flex gap-4 mt-auto">
+                       <div className="flex gap-3 mt-auto">
                           <button 
                               onClick={() => {
                                   addToCart(quickViewProduct);
                                   setQuickViewProduct(null);
                               }}
-                              className="flex-1 bg-accent hover:bg-accentHover text-white py-4 rounded-xl text-sm font-bold transition flex items-center justify-center gap-2 shadow-lg shadow-accent/20 hover:-translate-y-0.5"
+                              className="flex-1 bg-accent hover:bg-accentHover text-white py-3 rounded-lg text-sm font-bold transition flex items-center justify-center gap-2 shadow-lg shadow-accent/20 hover:-translate-y-0.5 border border-accent/50"
                           >
-                              <ShoppingCart size={20} />
-                              أضف للسلة الآن
+                              <ShoppingCart size={18} />
+                              أضف للسلة
                           </button>
                           <Link 
                               to={`/store/product/${quickViewProduct.id}`}
-                              className="px-6 py-4 rounded-xl border border-white/10 hover:bg-white/5 text-white transition flex items-center justify-center font-bold text-sm hover:border-white/30"
+                              className="px-5 py-3 rounded-lg border border-white/10 hover:bg-white/5 text-white transition flex items-center justify-center font-bold text-sm hover:border-white/30"
                           >
-                              التفاصيل الكاملة
+                              التفاصيل
                           </Link>
                        </div>
                   </div>

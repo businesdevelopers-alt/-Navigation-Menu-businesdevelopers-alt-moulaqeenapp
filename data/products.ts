@@ -8,7 +8,7 @@ export const PRODUCTS: Product[] = [
     category: 'kit', 
     price: 299, 
     description: 'طقم متكامل للمبتدئين يحتوي على لوحة تحكم، عجلات، هيكل أكريليك، ومجموعة حساسات لبناء سيارة ذكية.', 
-    image: 'https://images.unsplash.com/photo-1550751827-4bd374c3f58b?auto=format&fit=crop&q=80&w=800' 
+    image: 'https://images.unsplash.com/photo-1553406830-ef2513450d76?auto=format&fit=crop&q=80&w=800' 
   },
   { 
     id: '2', 
@@ -16,7 +16,7 @@ export const PRODUCTS: Product[] = [
     category: 'sensor', 
     price: 45, 
     description: 'وحدة قياس المسافة بالموجات فوق الصوتية HC-SR04، دقة عالية تصل إلى 3 ملم، مثالي لمشاريع تجنب العقبات.', 
-    image: 'https://images.unsplash.com/photo-1555664424-778a69022365?auto=format&fit=crop&q=80&w=800' 
+    image: 'https://images.unsplash.com/photo-1581092160562-40aa08e78837?auto=format&fit=crop&q=80&w=800' 
   },
   { 
     id: '3', 
@@ -24,7 +24,7 @@ export const PRODUCTS: Product[] = [
     category: 'part', 
     price: 89, 
     description: 'محرك سيرفو SG90 عالي الجودة، دوران 180 درجة، تروس معدنية لتحمل الضغط، مناسب للأذرع الروبوتية.', 
-    image: 'https://images.unsplash.com/photo-1581092160562-40aa08e78837?auto=format&fit=crop&q=80&w=800' 
+    image: 'https://images.unsplash.com/photo-1563770094255-080cdf729c4c?auto=format&fit=crop&q=80&w=800' 
   },
   { 
     id: '4', 
@@ -32,7 +32,7 @@ export const PRODUCTS: Product[] = [
     category: 'kit', 
     price: 550, 
     description: 'نموذج تعليمي لذراع روبوت صناعي بـ 4 محاور حرية، قابل للبرمجة عبر بايثون، مصنوع من الألمنيوم المقوى.', 
-    image: 'https://images.unsplash.com/photo-1619642250109-17387431f3c3?auto=format&fit=crop&q=80&w=800' 
+    image: 'https://images.unsplash.com/photo-1616161560417-66d4db5892ec?auto=format&fit=crop&q=80&w=800' 
   },
   { 
     id: '5', 
@@ -40,7 +40,7 @@ export const PRODUCTS: Product[] = [
     category: 'sensor', 
     price: 199, 
     description: 'كاميرا متوافقة مع ESP32 تدعم التعرف على الوجوه والألوان، دقة 5 ميجابكسل مع عدسة واسعة الزاوية.', 
-    image: 'https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?auto=format&fit=crop&q=80&w=800' 
+    image: 'https://images.unsplash.com/photo-1516035069371-29a1b244cc32?auto=format&fit=crop&q=80&w=800' 
   },
   { 
     id: '6', 

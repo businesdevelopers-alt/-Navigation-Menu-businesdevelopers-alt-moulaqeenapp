@@ -46,6 +46,9 @@ export interface Course {
   lessons: number;
   image: string;
   price: number | 'free';
+  category: 'programming' | 'electronics' | 'mechanics' | 'ai';
+  rating: number;
+  reviews: number;
 }
 
 // --- SIMULATION ENGINE TYPES ---
