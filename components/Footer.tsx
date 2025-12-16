@@ -66,8 +66,8 @@ const Footer: React.FC = () => {
         <div className="border-t border-white/5 mt-16 pt-8 text-center text-xs text-gray-500 flex flex-col md:flex-row justify-between items-center">
           <p className="font-latin mb-2 md:mb-0">&copy; {new Date().getFullYear()} Mulaqqen. All rights reserved.</p>
           <div className="flex gap-6">
-             <a href="#" className="hover:text-highlight transition">سياسة الخصوصية</a>
-             <a href="#" className="hover:text-highlight transition">شروط الاستخدام</a>
+             <Link to="/privacy" className="hover:text-highlight transition">سياسة الخصوصية</Link>
+             <Link to="/terms" className="hover:text-highlight transition">شروط الاستخدام</Link>
           </div>
         </div>
       </div>

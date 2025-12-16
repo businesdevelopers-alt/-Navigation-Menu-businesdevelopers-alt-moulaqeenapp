@@ -64,7 +64,7 @@ const Navbar: React.FC = () => {
                     <div className="py-2">
                       <Link to="/about" className="block px-4 py-2.5 text-sm font-semibold tracking-wide text-white/80 hover:text-white hover:bg-white/5 transition-colors">من نحن</Link>
                       <Link to="/docs" className="block px-4 py-2.5 text-sm font-semibold tracking-wide text-white/80 hover:text-white hover:bg-white/5 transition-colors">التوثيق</Link>
-                      <Link to="/support" className="block px-4 py-2.5 text-sm font-semibold tracking-wide text-white/80 hover:text-white hover:bg-white/5 transition-colors">المدونة</Link>
+                      <Link to="/blog" className="block px-4 py-2.5 text-sm font-semibold tracking-wide text-white/80 hover:text-white hover:bg-white/5 transition-colors">المدونة</Link>
                       <Link to="/support" className="block px-4 py-2.5 text-sm font-semibold tracking-wide text-white/80 hover:text-white hover:bg-white/5 transition-colors">الشروط والخصوصية</Link>
                     </div>
                   </div>
@@ -160,7 +160,7 @@ const Navbar: React.FC = () => {
 
                 <MobileLink to="/about" onClick={() => setIsMobileMenuOpen(false)}>من نحن</MobileLink>
                 <MobileLink to="/docs" onClick={() => setIsMobileMenuOpen(false)}>التوثيق</MobileLink>
-                <MobileLink to="/support" onClick={() => setIsMobileMenuOpen(false)}>المدونة</MobileLink>
+                <MobileLink to="/blog" onClick={() => setIsMobileMenuOpen(false)}>المدونة</MobileLink>
 
                 <div className="pt-3 border-t border-white/10 my-3"></div>
 

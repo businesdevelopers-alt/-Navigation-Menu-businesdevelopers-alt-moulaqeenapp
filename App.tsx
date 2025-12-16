@@ -14,6 +14,9 @@ import Register from './pages/Register';
 import Profile from './pages/Profile';
 import ProductDetails from './pages/ProductDetails';
 import CourseDetails from './pages/CourseDetails';
+import Blog from './pages/Blog';
+import Privacy from './pages/Privacy';
+import Terms from './pages/Terms';
 
 const App: React.FC = () => {
   return (
@@ -27,11 +30,14 @@ const App: React.FC = () => {
           <Route path="store" element={<Store />} />
           <Route path="store/product/:id" element={<ProductDetails />} />
           <Route path="about" element={<About />} />
+          <Route path="blog" element={<Blog />} />
           <Route path="support" element={<Support />} />
           <Route path="docs" element={<Docs />} />
           <Route path="login" element={<Login />} />
           <Route path="register" element={<Register />} />
           <Route path="profile" element={<Profile />} />
+          <Route path="privacy" element={<Privacy />} />
+          <Route path="terms" element={<Terms />} />
         </Route>
       </Routes>
     </Router>

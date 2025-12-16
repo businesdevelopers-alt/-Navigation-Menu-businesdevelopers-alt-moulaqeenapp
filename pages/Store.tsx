@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
-import { ShoppingCart, Search, Filter, X, DollarSign, Eye, Check, Zap, Cpu, Settings, Star, ArrowRight, Package, Heart } from 'lucide-react';
+import { ShoppingCart, Search, Filter, X, DollarSign, Eye, Check, Zap, Cpu, Settings, Star, ArrowRight, Package, Heart, ImageOff } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
 import { PRODUCTS } from '../data/products';
 import { Product } from '../types';
+
+const PLACEHOLDER_IMAGE = "https://images.unsplash.com/photo-1485827404703-89b55fcc595e?auto=format&fit=crop&q=80&w=800";
 
 const Store: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -12,6 +14,13 @@ const Store: React.FC = () => {
   const [sortBy, setSortBy] = useState<'relevance' | 'price_asc' | 'price_desc'>('relevance');
   const [quickViewProduct, setQuickViewProduct] = useState<Product | null>(null);
   const { addToCart, cartCount } = useCart();
+  
+  // Image Loading State
+  const [loadedImages, setLoadedImages] = useState<{[key:string]: boolean}>({});
+
+  const handleImageLoad = (id: string) => {
+    setLoadedImages(prev => ({...prev, [id]: true}));
+  };
 
   const priceRanges = [
     { id: 'all', label: 'الكل', min: 0, max: Infinity },
@@ -164,94 +173,88 @@ const Store: React.FC = () => {
             {filteredProducts.length > 0 ? (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                 {filteredProducts.map((product) => (
-                  <div key={product.id} className="group relative bg-[#1A1E24] rounded-2xl border border-white/5 overflow-hidden hover:border-accent/30 transition-all duration-300 hover:shadow-2xl hover:shadow-black/50 hover:-translate-y-1 flex flex-col h-full">
+                  <div key={product.id} className="group relative bg-[#1A1E24] rounded-2xl border border-white/5 overflow-hidden transition-all duration-500 hover:shadow-[0_0_40px_rgba(45,137,229,0.1)] hover:-translate-y-2 flex flex-col h-full hover:border-white/20">
                     
-                    {/* Image Container */}
-                    <div className="relative aspect-square overflow-hidden bg-black/20">
+                    {/* Image with overlay gradient */}
+                    <div className="relative h-64 overflow-hidden bg-black/40">
+                        {!loadedImages[product.id] && (
+                            <div className="absolute inset-0 bg-white/5 animate-pulse z-10 flex items-center justify-center">
+                                <ImageOff size={24} className="text-white/20" />
+                            </div>
+                        )}
                         <img 
                             src={product.image} 
                             alt={product.name} 
-                            className="w-full h-full object-cover transition-transform duration-700 ease-out group-hover:scale-110 opacity-90 group-hover:opacity-100"
+                            onLoad={() => handleImageLoad(product.id)}
+                            onError={(e) => {
+                                (e.target as HTMLImageElement).src = PLACEHOLDER_IMAGE;
+                                handleImageLoad(product.id);
+                            }}
+                            className={`w-full h-full object-cover transition-all duration-700 ease-out group-hover:scale-110 opacity-90 group-hover:opacity-100 ${loadedImages[product.id] ? 'opacity-100' : 'opacity-0'}`}
                         />
+                        <div className="absolute inset-0 bg-gradient-to-t from-[#1A1E24] via-transparent to-transparent opacity-80" />
                         
-                        {/* Gradient Overlay */}
-                        <div className="absolute inset-0 bg-gradient-to-t from-[#1A1E24] via-transparent to-transparent opacity-0 group-hover:opacity-40 transition-opacity duration-300" />
-
-                        {/* Floating Badges */}
-                        <div className="absolute top-3 left-3 flex gap-2 z-10">
-                            <span className={`backdrop-blur-md px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider border flex items-center gap-1.5 shadow-sm
-                                ${product.category === 'kit' ? 'bg-purple-500/20 text-purple-200 border-purple-500/30' : 
-                                  product.category === 'sensor' ? 'bg-cyan-500/20 text-cyan-200 border-cyan-500/30' : 
-                                  'bg-orange-500/20 text-orange-200 border-orange-500/30'}
-                            `}>
-                                {product.category === 'kit' ? <Cpu size={10} /> : product.category === 'sensor' ? <Zap size={10} /> : <Settings size={10} />}
+                        {/* Badge */}
+                        <div className="absolute top-4 right-4 z-20">
+                             <span className={`px-3 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider backdrop-blur-md border shadow-lg flex items-center gap-2 transition-transform group-hover:scale-105
+                                ${product.category === 'kit' ? 'bg-purple-500/20 text-purple-300 border-purple-500/30' : 
+                                  product.category === 'sensor' ? 'bg-cyan-500/20 text-cyan-300 border-cyan-500/30' : 
+                                  'bg-orange-500/20 text-orange-300 border-orange-500/30'}
+                             `}>
+                                {product.category === 'kit' ? <Cpu size={12} /> : product.category === 'sensor' ? <Zap size={12} /> : <Settings size={12} />}
                                 {product.category === 'kit' ? 'طقم تعليمي' : product.category === 'sensor' ? 'مستشعر' : 'قطعة غيار'}
-                            </span>
-                        </div>
-
-                        {/* Quick Actions Overlay */}
-                        <div className="absolute inset-0 z-20 flex items-center justify-center gap-3 opacity-0 group-hover:opacity-100 transition-all duration-300 backdrop-blur-[2px] bg-black/20">
-                            <button 
-                                onClick={(e) => {
-                                  e.preventDefault();
-                                  setQuickViewProduct(product);
-                                }}
-                                className="w-11 h-11 rounded-full bg-white/10 backdrop-blur-md border border-white/20 text-white flex items-center justify-center hover:bg-white hover:text-black transition-all transform translate-y-4 group-hover:translate-y-0 duration-300 delay-75 shadow-lg scale-90 hover:scale-100"
-                                title="نظرة سريعة"
-                            >
-                                <Eye size={18} />
-                            </button>
-                            <button 
-                              onClick={(e) => {
-                                e.preventDefault();
-                                addToCart(product);
-                              }}
-                              className="w-11 h-11 rounded-full bg-accent text-white flex items-center justify-center hover:bg-accentHover transition-all transform translate-y-4 group-hover:translate-y-0 duration-300 delay-100 shadow-lg scale-90 hover:scale-100"
-                              title="أضف للسلة"
-                            >
-                              <ShoppingCart size={18} />
-                            </button>
+                             </span>
                         </div>
                     </div>
 
                     {/* Content */}
-                    <div className="p-5 flex flex-col flex-1 relative">
-                        {/* Decorative background accent */}
-                        <div className="absolute top-0 right-0 w-20 h-20 bg-accent/5 rounded-bl-full -z-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none"></div>
-
-                        <div className="relative z-10 flex-1">
-                            <Link to={`/store/product/${product.id}`} className="group-hover:text-accent transition-colors duration-200 block mb-2">
-                                <h3 className="text-white font-bold text-lg leading-tight line-clamp-2">{product.name}</h3>
-                            </Link>
-
-                            <div className="flex items-center gap-1 mb-3">
-                                {[1,2,3,4,5].map(i => (
-                                    <Star key={i} size={11} className={`${i <= 4 ? 'text-yellow-400 fill-yellow-400' : 'text-gray-700'}`} />
-                                ))}
-                                <span className="text-[10px] text-gray-500 mr-1 font-mono">(24)</span>
+                    <div className="p-6 flex flex-col flex-1 relative -mt-12 z-10">
+                        <Link to={`/store/product/${product.id}`} className="block group-hover:text-accent transition-colors duration-300">
+                            <h3 className="text-xl font-bold text-white mb-2 leading-tight">{product.name}</h3>
+                        </Link>
+                        
+                        <div className="flex items-center gap-1 mb-4 opacity-80">
+                            <div className="flex text-yellow-500">
+                               {[...Array(5)].map((_, i) => <Star key={i} size={12} fill="currentColor" />)}
                             </div>
-
-                            <p className="text-gray-400 text-xs leading-relaxed line-clamp-2 mb-4 h-8 opacity-80 group-hover:opacity-100 transition-opacity">
-                                {product.description}
-                            </p>
+                            <span className="text-[10px] text-gray-400 font-mono">(4.8)</span>
                         </div>
 
-                        <div className="mt-4 pt-4 border-t border-white/5 flex items-center justify-between relative z-10">
-                            <div>
-                                <p className="text-[10px] text-gray-500 uppercase tracking-wider font-bold mb-0.5">السعر</p>
+                        <p className="text-gray-400 text-sm leading-relaxed mb-6 line-clamp-2">
+                            {product.description}
+                        </p>
+                        
+                        <div className="mt-auto flex items-center justify-between border-t border-white/5 pt-4">
+                             <div>
+                                <span className="block text-[10px] text-gray-500 uppercase tracking-widest font-bold mb-1">السعر</span>
                                 <div className="flex items-baseline gap-1">
-                                    <span className="text-xl font-bold text-white font-mono tracking-tight group-hover:text-highlight transition-colors">{product.price}</span>
-                                    <span className="text-xs text-gray-400 font-medium">ر.س</span>
+                                    <span className="text-2xl font-bold text-white font-mono tracking-tighter group-hover:text-highlight transition-colors">{product.price}</span>
+                                    <span className="text-xs text-gray-400">ر.س</span>
                                 </div>
-                            </div>
-                            
-                            <Link 
-                                to={`/store/product/${product.id}`}
-                                className="px-4 py-2 rounded-lg bg-white/5 text-xs font-bold text-gray-300 hover:text-white hover:bg-white/10 border border-white/5 hover:border-white/20 transition-all flex items-center gap-1.5"
-                            >
-                                التفاصيل
-                                <ArrowRight size={14} />
-                            </Link>
+                             </div>
+                             
+                             <div className="flex gap-2">
+                                 <button 
+                                    onClick={(e) => {
+                                        e.preventDefault();
+                                        setQuickViewProduct(product);
+                                    }}
+                                    className="w-10 h-10 rounded-xl bg-white/5 hover:bg-white/10 text-gray-300 hover:text-white border border-white/5 hover:border-white/20 flex items-center justify-center transition-all hover:scale-105"
+                                    title="نظرة سريعة"
+                                 >
+                                    <Eye size={18} />
+                                 </button>
+                                 <button 
+                                    onClick={(e) => {
+                                        e.preventDefault();
+                                        addToCart(product);
+                                    }}
+                                    className="w-10 h-10 rounded-xl bg-accent hover:bg-accentHover text-white flex items-center justify-center transition-all shadow-lg hover:shadow-accent/40 hover:scale-110 active:scale-95 group/cart"
+                                    title="أضف للسلة"
+                                 >
+                                    <ShoppingCart size={18} className="transition-transform group-hover/cart:-rotate-12" />
+                                 </button>
+                             </div>
                         </div>
                     </div>
                   </div>
@@ -295,6 +298,7 @@ const Store: React.FC = () => {
                        <img 
                           src={quickViewProduct.image} 
                           alt={quickViewProduct.name} 
+                          onError={(e) => (e.target as HTMLImageElement).src = PLACEHOLDER_IMAGE}
                           className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity duration-500"
                        />
                        <div className="absolute inset-0 bg-gradient-to-t from-[#15191E] via-transparent to-transparent opacity-80"></div>

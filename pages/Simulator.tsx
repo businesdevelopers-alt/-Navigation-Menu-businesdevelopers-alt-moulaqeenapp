@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Play, Pause, RotateCcw, Send, Terminal, Battery, Thermometer, Activity, Bot, Sparkles, FileCode, Loader2, Wrench, Cpu, Zap, ArrowUp, ArrowDown, ArrowLeft, ArrowRight, ChevronDown, Package } from 'lucide-react';
+import { Play, Pause, RotateCcw, Send, Terminal, Battery, Thermometer, Activity, Bot, Sparkles, FileCode, Loader2, Wrench, Cpu, Zap, ArrowUp, ArrowDown, ArrowLeft, ArrowRight, ChevronDown, Package, X, GripVertical } from 'lucide-react';
 import { SimulationEngine } from '../services/simulationEngine';
 import { streamAssistantHelp } from '../services/geminiService';
 import { RobotState, RobotSchema, ComponentSchema } from '../types';
@@ -16,20 +16,19 @@ FORWARD
 
 // Available Components for the Parts Box
 const AVAILABLE_COMPONENTS: ComponentSchema[] = [
-  { id: 'empty', type: 'empty', name: 'منفذ فارغ', powerConsumption: 0 },
-  { id: 'ultra', type: 'sensor-dist', name: 'حساس مسافة (Ultrasonic)', powerConsumption: 1 },
-  { id: 'lidar', type: 'lidar', name: 'ماسح ليزر (Lidar)', powerConsumption: 3 },
-  { id: 'cam', type: 'camera', name: 'كاميرا ذكية (AI Cam)', powerConsumption: 4 },
-  { id: 'temp', type: 'temp', name: 'حساس حرارة (Thermal)', powerConsumption: 1 },
-  { id: 'servo', type: 'motor', name: 'محرك سيرفو (Servo)', powerConsumption: 2 },
-  { id: 'dc', type: 'motor', name: 'محرك DC قوي', powerConsumption: 3 },
+  { id: 'ultra', type: 'sensor-dist', name: 'حساس مسافة', powerConsumption: 1 },
+  { id: 'lidar', type: 'lidar', name: 'ماسح ليزر', powerConsumption: 3 },
+  { id: 'cam', type: 'camera', name: 'كاميرا AI', powerConsumption: 4 },
+  { id: 'temp', type: 'temp', name: 'حساس حرارة', powerConsumption: 1 },
+  { id: 'servo', type: 'motor', name: 'محرك سيرفو', powerConsumption: 2 },
+  { id: 'dc', type: 'motor', name: 'محرك DC', powerConsumption: 3 },
 ];
 
 const INITIAL_ROBOT_CONFIG: RobotSchema = {
   processor: { type: 'standard', position: 'center' },
   slots: {
     front: AVAILABLE_COMPONENTS.find(c => c.id === 'ultra') || null,
-    back: AVAILABLE_COMPONENTS.find(c => c.id === 'empty') || null,
+    back: null,
     left: AVAILABLE_COMPONENTS.find(c => c.id === 'servo') || null,
     right: AVAILABLE_COMPONENTS.find(c => c.id === 'servo') || null,
   },
@@ -64,6 +63,9 @@ const Simulator: React.FC = () => {
   const engineRef = useRef<SimulationEngine | null>(null);
   const intervalRef = useRef<number | null>(null);
   const commandsQueueRef = useRef<string[]>([]);
+
+  // Drag and Drop State
+  const [draggedItem, setDraggedItem] = useState<ComponentSchema | null>(null);
 
   // Initialize Engine
   useEffect(() => {
@@ -167,15 +169,43 @@ const Simulator: React.FC = () => {
     initEngine();
   };
 
-  const handleConfigChange = (slot: 'front' | 'back' | 'left' | 'right', componentId: string) => {
-    const component = AVAILABLE_COMPONENTS.find(c => c.id === componentId) || null;
-    setRobotConfig(prev => ({
-        ...prev,
-        slots: {
-            ...prev.slots,
-            [slot]: component
-        }
-    }));
+  // --- DRAG AND DROP HANDLERS ---
+  const handleDragStart = (e: React.DragEvent, component: ComponentSchema) => {
+    setDraggedItem(component);
+    e.dataTransfer.setData('componentId', component.id);
+    e.dataTransfer.effectAllowed = 'copy';
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'copy';
+  };
+
+  const handleDrop = (e: React.DragEvent, slot: 'front' | 'back' | 'left' | 'right') => {
+    e.preventDefault();
+    const componentId = e.dataTransfer.getData('componentId');
+    const component = AVAILABLE_COMPONENTS.find(c => c.id === componentId);
+    
+    if (component) {
+        setRobotConfig(prev => ({
+            ...prev,
+            slots: {
+                ...prev.slots,
+                [slot]: component
+            }
+        }));
+    }
+    setDraggedItem(null);
+  };
+
+  const handleRemovePart = (slot: 'front' | 'back' | 'left' | 'right') => {
+      setRobotConfig(prev => ({
+          ...prev,
+          slots: {
+              ...prev.slots,
+              [slot]: null
+          }
+      }));
   };
 
   const handleChatSubmit = async (e: React.FormEvent) => {
@@ -229,10 +259,12 @@ const Simulator: React.FC = () => {
           >
             {isRobot && (
               <div 
-                className={`transition-all duration-500 ${isShaking ? 'animate-shake text-red-500' : 'text-accent'}`}
+                className="transition-all duration-500 flex items-center justify-center"
                 style={{ transform: `rotate(${robotState.direction - 90}deg)` }} 
               >
-                <Bot size={32} />
+                <div className={`${isShaking ? 'animate-shake text-red-500' : 'text-accent'}`}>
+                  <Bot size={32} />
+                </div>
               </div>
             )}
             {isObstacle && <div className="w-3 h-3 bg-red-500 rounded-sm opacity-50"></div>}
@@ -243,49 +275,52 @@ const Simulator: React.FC = () => {
     return cells;
   };
 
-  // Helper for rendering slot selection
-  const renderSlotSelector = (label: string, slotKey: 'front' | 'back' | 'left' | 'right', icon: React.ReactNode) => {
-      const selectedId = robotConfig.slots[slotKey]?.id || 'empty';
-      const selectedComponent = AVAILABLE_COMPONENTS.find(c => c.id === selectedId);
-
-      return (
-        <div className="bg-primary p-4 rounded-xl border border-white/10 flex flex-col gap-3 group hover:border-accent/30 transition-colors">
-            <div className="flex items-center justify-between">
-               <div className="flex items-center gap-2 text-xs text-gray-400 font-bold uppercase tracking-wider">
-                  {icon} {label}
-               </div>
-               {selectedComponent?.type !== 'empty' && (
-                   <div className={`w-2 h-2 rounded-full ${selectedComponent?.type === 'motor' ? 'bg-yellow-500' : 'bg-blue-500'} shadow-[0_0_8px_currentColor]`}></div>
-               )}
+  // Helper for Drop Zone
+  const renderDropZone = (slot: 'front' | 'back' | 'left' | 'right', label: string, icon: React.ReactNode) => {
+    const component = robotConfig.slots[slot];
+    
+    return (
+        <div 
+            onDragOver={handleDragOver}
+            onDrop={(e) => handleDrop(e, slot)}
+            className={`relative flex flex-col items-center justify-center rounded-xl border-2 border-dashed transition-all duration-200 h-24 w-24
+                ${component 
+                    ? 'border-accent bg-accent/10' 
+                    : 'border-white/10 bg-white/5 hover:border-white/30 hover:bg-white/10'
+                }
+            `}
+        >
+            {/* Slot Label */}
+            <div className={`absolute -top-3 px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider backdrop-blur-sm
+                 ${component ? 'bg-accent text-white' : 'bg-black border border-white/10 text-gray-500'}
+            `}>
+                {label}
             </div>
-            
-            <div className="relative">
-                <select 
-                   className="w-full bg-secondary border border-white/10 text-white text-sm rounded-lg p-3 pl-8 appearance-none focus:border-accent cursor-pointer hover:bg-white/5 transition-colors focus:outline-none"
-                   value={selectedId}
-                   onChange={(e) => handleConfigChange(slotKey, e.target.value)}
-                >
-                    {AVAILABLE_COMPONENTS.map(c => (
-                        <option key={c.id} value={c.id}>
-                          {c.name} {c.powerConsumption > 0 ? `(${c.powerConsumption}⚡)` : ''}
-                        </option>
-                    ))}
-                </select>
-                <div className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none text-gray-500">
-                    <ChevronDown size={14} />
+
+            {component ? (
+                <>
+                   <button 
+                      onClick={() => handleRemovePart(slot)}
+                      className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-0.5 hover:bg-red-600 z-10"
+                   >
+                      <X size={12} />
+                   </button>
+                   <div className="flex flex-col items-center text-center p-1">
+                      {component.type.includes('motor') ? <Zap size={20} className="text-yellow-400 mb-1" /> : 
+                       component.type.includes('camera') ? <Bot size={20} className="text-blue-400 mb-1" /> :
+                       <Activity size={20} className="text-green-400 mb-1" />}
+                      <span className="text-[9px] font-bold text-white leading-tight">{component.name}</span>
+                      <span className="text-[8px] font-mono text-gray-400 mt-0.5">{component.powerConsumption}⚡</span>
+                   </div>
+                </>
+            ) : (
+                <div className="text-gray-600 flex flex-col items-center opacity-50">
+                    {icon}
+                    <span className="text-[9px] mt-1">فارغ</span>
                 </div>
-            </div>
-
-            <div className="flex justify-between items-center px-1 border-t border-white/5 pt-3 mt-1">
-               <div className="flex items-center gap-2">
-                  <span className="text-[10px] text-gray-500">استهلاك الطاقة</span>
-               </div>
-               <span className={`text-xs font-mono font-bold ${selectedComponent?.powerConsumption ? 'text-white' : 'text-gray-600'}`}>
-                  {selectedComponent?.powerConsumption || 0} <span className="text-[10px] text-gray-500">/tick</span>
-               </span>
-            </div>
+            )}
         </div>
-      );
+    );
   };
 
   return (
@@ -408,62 +443,91 @@ const Simulator: React.FC = () => {
                 )}
 
                 {activeTab === 'config' && (
-                    <div className="flex flex-col h-full p-4 overflow-y-auto custom-scrollbar">
-                        <div className="mb-6 p-5 bg-gradient-to-br from-secondary to-primary rounded-xl border border-white/10 relative overflow-hidden shadow-lg">
-                            <div className="absolute top-0 right-0 w-32 h-32 bg-accent/5 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2"></div>
-                            
-                            <h3 className="text-white font-bold mb-2 flex items-center gap-2 relative z-10">
-                                <div className="p-1.5 bg-accent/20 rounded-lg">
-                                    <Package size={16} className="text-accent" />
-                                </div>
-                                صندوق القطع (Components Box)
-                            </h3>
-                            <p className="text-xs text-gray-400 relative z-10 leading-relaxed max-w-md">
-                                قم بتخصيص عتاد الروبوت. اختيار محركات أقوى يزيد السرعة ولكن يستهلك البطارية. إضافة حساسات متقدمة يفتح إمكانيات برمجية جديدة.
+                    <div className="flex flex-col h-full bg-[#0F1216]">
+                        {/* Header Message */}
+                        <div className="p-4 border-b border-white/10 bg-secondary/50">
+                            <p className="text-xs text-gray-400 flex items-center gap-2">
+                                <Package size={14} className="text-accent" />
+                                اسحب القطع من الأسفل وأفلتها في مكانها المناسب على هيكل الروبوت.
                             </p>
                         </div>
 
-                        <div className="grid grid-cols-2 gap-4 mb-6">
-                            {/* Front Slot - Full Width */}
-                            <div className="col-span-2">
-                                {renderSlotSelector('المنفذ الأمامي (Front)', 'front', <ArrowUp size={14} className="text-accent" />)}
-                            </div>
+                        {/* Drag & Drop Area */}
+                        <div className="flex-1 p-6 flex flex-col items-center justify-center overflow-hidden relative bg-grid">
                             
-                            {/* Left Slot */}
-                            <div>
-                                {renderSlotSelector('المنفذ الأيسر (Left)', 'left', <ArrowLeft size={14} className="text-accent" />)}
-                            </div>
-                            
-                            {/* Right Slot */}
-                            <div>
-                                {renderSlotSelector('المنفذ الأيمن (Right)', 'right', <ArrowRight size={14} className="text-accent" />)}
+                            {/* Robot Visual Body (The Drop Target) */}
+                            <div className="relative">
+                                {/* Connecting Lines */}
+                                <div className="absolute top-1/2 left-0 w-full h-0.5 bg-white/10 -z-0"></div>
+                                <div className="absolute left-1/2 top-0 h-full w-0.5 bg-white/10 -z-0"></div>
+
+                                {/* Center (Processor) */}
+                                <div className="w-24 h-24 bg-secondary rounded-2xl border-2 border-white/20 flex flex-col items-center justify-center z-10 relative shadow-2xl">
+                                    <Cpu size={32} className="text-white mb-2" />
+                                    <span className="text-[9px] text-gray-400 font-mono">CORE V2</span>
+                                    <div className="absolute top-1 right-1 w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></div>
+                                </div>
+
+                                {/* Top Slot (Front) */}
+                                <div className="absolute -top-28 left-0">
+                                    {renderDropZone('front', 'أمامي', <ArrowUp size={16} />)}
+                                </div>
+
+                                {/* Bottom Slot (Back) */}
+                                <div className="absolute -bottom-28 left-0">
+                                    {renderDropZone('back', 'خلفي', <ArrowDown size={16} />)}
+                                </div>
+
+                                {/* Left Slot */}
+                                <div className="absolute top-0 -left-28">
+                                    {renderDropZone('left', 'يسار', <ArrowLeft size={16} />)}
+                                </div>
+
+                                {/* Right Slot */}
+                                <div className="absolute top-0 -right-28">
+                                    {renderDropZone('right', 'يمين', <ArrowRight size={16} />)}
+                                </div>
                             </div>
 
-                            {/* Back Slot - Full Width */}
-                            <div className="col-span-2">
-                                {renderSlotSelector('المنفذ الخلفي (Back)', 'back', <ArrowDown size={14} className="text-accent" />)}
-                            </div>
                         </div>
 
-                        <div className="mt-auto bg-[#0F1216] p-4 rounded-xl border border-white/10 shadow-inner">
-                            <div className="flex justify-between items-center mb-3">
-                                <div className="flex items-center gap-2">
-                                    <Zap size={14} className="text-yellow-500" />
-                                    <span className="text-xs text-gray-300 font-bold">معدل استهلاك الطاقة</span>
-                                </div>
+                        {/* Stats Panel */}
+                        <div className="bg-secondary p-3 border-t border-white/10 flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                                <Zap size={16} className="text-yellow-500" />
+                                <span className="text-xs text-gray-300 font-bold">الاستهلاك الكلي:</span>
                                 <span className="text-sm font-mono text-white font-bold">
                                     {[robotConfig.slots.front, robotConfig.slots.back, robotConfig.slots.left, robotConfig.slots.right].reduce((acc, slot) => acc + (slot?.powerConsumption || 0), 0) + 0.5} / tick
                                 </span>
                             </div>
-                            <div className="w-full bg-gray-800 h-2 rounded-full overflow-hidden border border-white/5">
-                                <div 
-                                    className="bg-gradient-to-r from-green-500 via-yellow-500 to-red-500 h-full transition-all duration-500"
-                                    style={{ width: `${Math.min(100, ([robotConfig.slots.front, robotConfig.slots.back, robotConfig.slots.left, robotConfig.slots.right].reduce((acc, slot) => acc + (slot?.powerConsumption || 0), 0) + 0.5) * 10)}%` }}
-                                ></div>
-                            </div>
-                            <p className="text-[10px] text-gray-500 mt-2 text-right opacity-60">
-                                * المعالج يستهلك 0.5 وحدة بشكل ثابت
-                            </p>
+                        </div>
+
+                        {/* Parts Box (Draggable Source) */}
+                        <div className="h-40 bg-[#1A1E24] border-t border-white/10 overflow-y-auto p-4 custom-scrollbar">
+                             <h4 className="text-xs font-bold text-gray-400 uppercase mb-3 flex items-center gap-2">
+                                <Wrench size={12} /> القطع المتاحة (اسحبني)
+                             </h4>
+                             <div className="flex gap-3 overflow-x-auto pb-2">
+                                {AVAILABLE_COMPONENTS.map(component => (
+                                    <div 
+                                        key={component.id}
+                                        draggable
+                                        onDragStart={(e) => handleDragStart(e, component)}
+                                        className="flex-shrink-0 w-24 bg-primary border border-white/10 rounded-lg p-3 cursor-grab hover:border-accent hover:shadow-lg transition-all active:cursor-grabbing flex flex-col items-center text-center group"
+                                    >
+                                        <div className="mb-2 text-gray-400 group-hover:text-white transition-colors">
+                                            {component.type.includes('motor') ? <Zap size={20} /> : 
+                                             component.type.includes('camera') ? <Bot size={20} /> :
+                                             <Activity size={20} />}
+                                        </div>
+                                        <span className="text-[10px] font-bold text-gray-300 leading-tight mb-1">{component.name}</span>
+                                        <div className="mt-auto flex items-center gap-1 bg-black/30 px-1.5 py-0.5 rounded">
+                                            <Zap size={8} className="text-yellow-500" />
+                                            <span className="text-[9px] font-mono text-gray-400">{component.powerConsumption}</span>
+                                        </div>
+                                    </div>
+                                ))}
+                             </div>
                         </div>
                     </div>
                 )}
