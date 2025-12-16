@@ -137,6 +137,15 @@ const PREBUILT_DESIGNS: SavedDesign[] = [
     }
 ];
 
+// Helper to safely clone chassis without mangling React Elements in the component objects
+const cloneChassis = (slots: RobotSlot[]): RobotSlot[] => {
+    return slots.map(s => ({
+        ...s,
+        allowedTypes: [...s.allowedTypes],
+        component: s.component // Preserve the component object reference exactly as is
+    }));
+};
+
 const Simulator: React.FC = () => {
   // Tabs & Layout
   const [activeTab, setActiveTab] = useState<Tab>('designer');
@@ -144,8 +153,8 @@ const Simulator: React.FC = () => {
   const [isLeftControlsOpen, setIsLeftControlsOpen] = useState(true);
   
   // --- Robot Builder State (Advanced) ---
-  const [chassis, setChassis] = useState<RobotSlot[]>(JSON.parse(JSON.stringify(INITIAL_CHASSIS)));
-  const [history, setHistory] = useState<RobotSlot[][]>([JSON.parse(JSON.stringify(INITIAL_CHASSIS))]);
+  const [chassis, setChassis] = useState<RobotSlot[]>(cloneChassis(INITIAL_CHASSIS));
+  const [history, setHistory] = useState<RobotSlot[][]>([cloneChassis(INITIAL_CHASSIS)]);
   const [historyIndex, setHistoryIndex] = useState(0);
   
   const [draggedComponent, setDraggedComponent] = useState<ComponentItem | null>(null);
@@ -686,7 +695,7 @@ const Simulator: React.FC = () => {
                   <button onClick={handleSaveDesign} className="p-2 rounded-lg hover:bg-white/10 text-white" title="حفظ التصميم"><Save size={18}/></button>
                   <button onClick={() => setShowLoadModal(true)} className="p-2 rounded-lg hover:bg-white/10 text-white" title="تحميل تصميم"><FolderOpen size={18}/></button>
                   <div className="w-px bg-white/10 mx-1"></div>
-                  <button onClick={() => setChassis(JSON.parse(JSON.stringify(INITIAL_CHASSIS)))} className="p-2 rounded-lg hover:bg-red-500/20 text-red-400" title="مسح الكل"><Trash2 size={18}/></button>
+                  <button onClick={() => updateChassisWithHistory(cloneChassis(INITIAL_CHASSIS))} className="p-2 rounded-lg hover:bg-red-500/20 text-red-400" title="مسح الكل"><Trash2 size={18}/></button>
                   <div className="w-px bg-white/10 mx-1"></div>
                   <div className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border backdrop-blur-md ${designStatus.isValid ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400' : 'bg-red-500/10 border-red-500/30 text-red-400 animate-pulse'}`} title={designStatus.isValid ? "التصميم سليم" : "يوجد أخطاء في التصميم"}>
                       {designStatus.isValid ? <CheckCircle size={16}/> : <AlertOctagon size={16}/>}
