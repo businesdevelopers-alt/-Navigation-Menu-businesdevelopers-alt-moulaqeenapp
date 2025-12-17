@@ -7,7 +7,7 @@ export const PRODUCTS: Product[] = [
     category: 'kit', 
     price: 299, 
     description: 'طقم متكامل للمبتدئين يحتوي على لوحة تحكم، عجلات، هيكل أكريليك، ومجموعة حساسات لبناء سيارة ذكية.', 
-    image: 'https://images.unsplash.com/photo-1555447016-173f4e195707?auto=format&fit=crop&q=80&w=800' 
+    image: 'https://images.unsplash.com/photo-1553406830-ef2513450d76?auto=format&fit=crop&q=80&w=800' 
   },
   { 
     id: '2', 
@@ -15,7 +15,7 @@ export const PRODUCTS: Product[] = [
     category: 'sensor', 
     price: 45, 
     description: 'وحدة قياس المسافة بالموجات فوق الصوتية HC-SR04، دقة عالية تصل إلى 3 ملم، مثالي لمشاريع تجنب العقبات.', 
-    image: 'https://images.unsplash.com/photo-1581092160562-40aa08e78837?auto=format&fit=crop&q=80&w=800' 
+    image: 'https://images.unsplash.com/photo-1555617778-02518510b9fa?auto=format&fit=crop&q=80&w=800' 
   },
   { 
     id: '3', 
@@ -23,7 +23,7 @@ export const PRODUCTS: Product[] = [
     category: 'part', 
     price: 89, 
     description: 'محرك سيرفو SG90 عالي الجودة، دوران 180 درجة، تروس معدنية لتحمل الضغط، مناسب للأذرع الروبوتية.', 
-    image: 'https://images.unsplash.com/photo-1517077304055-6e89abbf09b0?auto=format&fit=crop&q=80&w=800' 
+    image: 'https://images.unsplash.com/photo-1589254065878-42c9da997008?auto=format&fit=crop&q=80&w=800' 
   },
   { 
     id: '4', 
@@ -31,7 +31,7 @@ export const PRODUCTS: Product[] = [
     category: 'kit', 
     price: 550, 
     description: 'نموذج تعليمي لذراع روبوت صناعي بـ 4 محاور حرية، قابل للبرمجة عبر بايثون، مصنوع من الألمنيوم المقوى.', 
-    image: 'https://images.unsplash.com/photo-1616161560417-66d4db5892ec?auto=format&fit=crop&q=80&w=800' 
+    image: 'https://images.unsplash.com/photo-1561144257-e1555cb6d518?auto=format&fit=crop&q=80&w=800' 
   },
   { 
     id: '5', 
@@ -47,7 +47,7 @@ export const PRODUCTS: Product[] = [
     category: 'part', 
     price: 320, 
     description: 'هيكل ميكانيكي لروبوت عنكبوتي، مقطوع بالليزر بدقة عالية، يشمل البراغي والمفاصل اللازمة للتجميع.', 
-    image: 'https://images.unsplash.com/photo-1535378437327-10f76365c4df?auto=format&fit=crop&q=80&w=800' 
+    image: 'https://images.unsplash.com/photo-1485827404703-89b55fcc595e?auto=format&fit=crop&q=80&w=800' 
   },
   {
     id: '7',
@@ -55,6 +55,6 @@ export const PRODUCTS: Product[] = [
     category: 'part',
     price: 150,
     description: 'لوحة تحكم إلكترونية مطبوعة مخصصة للمشاريع المتقدمة، تدعم واي-فاي وبلوتوث مدمج.',
-    image: '' 
+    image: 'https://images.unsplash.com/photo-1592659762303-90081d34b277?auto=format&fit=crop&q=80&w=800' 
   },
 ];

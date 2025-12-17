@@ -67,15 +67,20 @@ const Simulator: React.FC = () => {
   const [pathHistory, setPathHistory] = useState<{x: number, y: number}[]>([]);
   const [currentAction, setCurrentAction] = useState<string | null>(null);
 
+  // Visual Effects State
+  const [collisionCell, setCollisionCell] = useState<{x: number, y: number} | null>(null);
+
   // UI State
   const [activeTab, setActiveTab] = useState<'editor' | 'chat' | 'config'>('editor');
   const [chatMessages, setChatMessages] = useState<{role: 'user' | 'model', text: string}[]>([]);
   const [chatInput, setChatInput] = useState('');
   const [isChatLoading, setIsChatLoading] = useState(false);
+  const [isStreaming, setIsStreaming] = useState(false);
   const [aiPrompt, setAiPrompt] = useState('');
   const [isAiGenerating, setIsAiGenerating] = useState(false);
   const [showAiInput, setShowAiInput] = useState(false);
   const [partsFilter, setPartsFilter] = useState<'all' | 'motor' | 'sensor'>('all');
+  const [aiFeedback, setAiFeedback] = useState<string | null>(null);
 
   // Robot Config
   const [robotConfig, setRobotConfig] = useState<RobotSchema>(INITIAL_ROBOT_CONFIG);
@@ -111,7 +116,15 @@ const Simulator: React.FC = () => {
   // Auto-scroll chat
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [chatMessages]);
+  }, [chatMessages, isStreaming, isChatLoading]);
+
+  // Clear AI Feedback after a delay
+  useEffect(() => {
+    if (aiFeedback) {
+      const timer = setTimeout(() => setAiFeedback(null), 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [aiFeedback]);
 
   const initEngine = () => {
     const initialGrid = Array(GRID_SIZE).fill(null).map(() => Array(GRID_SIZE).fill('empty'));
@@ -130,6 +143,7 @@ const Simulator: React.FC = () => {
     setRobotState({ x: 0, y: 0, direction: 90 });
     setPathHistory([{x: 0, y: 0}]);
     setCurrentAction(null);
+    setCollisionCell(null);
   };
 
   const analyzeConfig = () => {
@@ -244,6 +258,7 @@ const Simulator: React.FC = () => {
     setIsRunning(true);
     setPathHistory([{x: 0, y: 0}]);
     setCurrentAction(null);
+    setCollisionCell(null);
     
     // Check Motors
     if (!robotConfig.slots.left || !robotConfig.slots.right) {
@@ -280,6 +295,12 @@ const Simulator: React.FC = () => {
         setBatteryLevel(result.battery);
         setTemperature(result.temperature);
         setPathHistory(prev => [...prev, {x: result.x, y: result.y}]);
+
+        // Trigger visual flash if collision occurred
+        if (result.collisionPoint) {
+            setCollisionCell(result.collisionPoint);
+            setTimeout(() => setCollisionCell(null), 400); // 400ms flash duration
+        }
 
         // Check Win Condition
         if (result.x === TARGET_POS.x && result.y === TARGET_POS.y) {
@@ -320,6 +341,7 @@ const Simulator: React.FC = () => {
     setTemperature(25);
     setLogs(['> إعادة ضبط النظام.']);
     setPathHistory([]);
+    setCollisionCell(null);
     initEngine();
   };
 
@@ -380,7 +402,8 @@ const Simulator: React.FC = () => {
         if (isRunning && !isPaused) {
              // LIVE MODE: Inject into queue
              commandsQueueRef.current = [...commandsQueueRef.current, ...commands];
-             setLogs(prev => [...prev, `> 🤖 AI Injected: ${commands.join(', ')}`]);
+             setLogs(prev => [...prev, `> 🤖 AI Injected: ${commands.length} commands`]);
+             setAiFeedback(`🤖 تم إضافة ${commands.length} أوامر للمحاكي!`);
              setAiPrompt('');
              // Keep input open for more commands
         } else {
@@ -388,14 +411,17 @@ const Simulator: React.FC = () => {
              const codeBlock = commands.join('\n') + '\n';
              insertCommand(`\n// AI: ${promptToUse}\n` + codeBlock);
              setLogs(prev => [...prev, `> AI generated ${commands.length} commands successfully.`]);
+             setAiFeedback(`✅ تم توليد الكود بنجاح`);
              setAiPrompt('');
              setShowAiInput(false);
         }
       } else {
         setLogs(prev => [...prev, '> AI could not interpret the request.']);
+        setAiFeedback(`⚠️ لم أستطع فهم الأمر`);
       }
     } catch (err) { 
         setLogs(prev => [...prev, '> Error generating code.']); 
+        setAiFeedback(`❌ حدث خطأ`);
     } finally { 
         setIsAiGenerating(false); 
     }
@@ -407,7 +433,7 @@ const Simulator: React.FC = () => {
     if (!textToSend.trim()) return;
 
     setChatMessages(prev => [...prev, { role: 'user', text: textToSend }]);
-    setChatInput('');
+    if (!customInput) setChatInput(''); // Only clear input if typed by user, not if quick action
     setIsChatLoading(true);
 
     try {
@@ -419,6 +445,10 @@ const Simulator: React.FC = () => {
 
         const stream = await streamAssistantHelp(textToSend, code, contextState);
         
+        // Stop loading dots and start streaming indicator
+        setIsChatLoading(false);
+        setIsStreaming(true);
+
         setChatMessages(prev => [...prev, { role: 'model', text: '' }]);
         let fullResponse = "";
         
@@ -427,7 +457,9 @@ const Simulator: React.FC = () => {
                 fullResponse += chunk.text;
                 setChatMessages(prev => {
                     const newArr = [...prev];
-                    newArr[newArr.length - 1].text = fullResponse;
+                    const lastIdx = newArr.length - 1;
+                    // Correctly mutate the copied object, not the state object directly
+                    newArr[lastIdx] = { ...newArr[lastIdx], text: fullResponse };
                     return newArr;
                 });
             }
@@ -436,6 +468,7 @@ const Simulator: React.FC = () => {
         setChatMessages(prev => [...prev, { role: 'model', text: "عذراً، حدث خطأ في الاتصال. حاول مرة أخرى." }]); 
     } finally { 
         setIsChatLoading(false); 
+        setIsStreaming(false);
     }
   };
 
@@ -535,23 +568,25 @@ const Simulator: React.FC = () => {
         // Check Obstacles Array
         const isObstacle = OBSTACLES.some(obs => obs.x === x && obs.y === y);
         const isPath = pathHistory.some(p => p.x === x && p.y === y);
+        const isHit = collisionCell && collisionCell.x === x && collisionCell.y === y;
         
         cells.push(
           <div 
             key={`${x}-${y}`} 
             className={`
               w-full h-full border-[0.5px] border-white/5 flex items-center justify-center relative transition-colors duration-300
-              ${isObstacle ? 'bg-red-500/10 shadow-[inset_0_0_10px_rgba(239,68,68,0.2)]' : ''}
+              ${isHit ? 'bg-red-500 animate-pulse z-30 shadow-[0_0_20px_rgba(239,68,68,0.8)]' : ''}
+              ${!isHit && isObstacle ? 'bg-red-500/10 shadow-[inset_0_0_10px_rgba(239,68,68,0.2)]' : ''}
               ${isTarget ? 'bg-green-500/10 shadow-[inset_0_0_15px_rgba(34,197,94,0.2)]' : ''}
-              ${isPath ? 'bg-accent/5' : ''}
+              ${isPath && !isHit ? 'bg-accent/5' : ''}
             `}
           >
-            {isPath && <div className="w-1.5 h-1.5 rounded-full bg-accent/30 animate-in zoom-in"></div>}
+            {isPath && !isHit && <div className="w-1.5 h-1.5 rounded-full bg-accent/30 animate-in zoom-in"></div>}
             
             {isObstacle && (
                 <div className="w-full h-full flex items-center justify-center">
-                    <div className="w-8 h-8 bg-red-500/20 rounded-md border border-red-500/40 flex items-center justify-center">
-                        <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></div>
+                    <div className={`w-8 h-8 rounded-md border flex items-center justify-center transition-all duration-300 ${isHit ? 'bg-red-600 border-white text-white scale-110' : 'bg-red-500/20 border-red-500/40'}`}>
+                        <div className={`w-2 h-2 rounded-full ${isHit ? 'bg-white' : 'bg-red-500 animate-pulse'}`}></div>
                     </div>
                 </div>
             )}
@@ -688,6 +723,14 @@ const Simulator: React.FC = () => {
 
               {/* Grid Container */}
               <div className="flex-1 bg-[#0F1216] rounded-xl border border-white/10 p-6 relative overflow-hidden flex items-center justify-center shadow-inner group">
+                 {/* AI Feedback Toast */}
+                 {aiFeedback && (
+                    <div className="absolute top-4 left-1/2 -translate-x-1/2 z-50 bg-black/80 backdrop-blur-md border border-purple-500/30 text-white px-4 py-2 rounded-full shadow-2xl animate-in slide-in-from-top-4 fade-in duration-300 flex items-center gap-2">
+                        <Sparkles size={16} className="text-purple-400" />
+                        <span className="text-xs font-bold">{aiFeedback}</span>
+                    </div>
+                 )}
+
                  <div className="relative aspect-square h-full max-h-[500px] w-full max-w-[500px]">
                     {/* Grid Background */}
                     <div className="absolute inset-0 grid grid-cols-10 grid-rows-10 gap-1">
@@ -835,7 +878,7 @@ const Simulator: React.FC = () => {
                                 `}
                             >
                                 <Sparkles size={10} />
-                                AI Assistant
+                                {showAiInput ? 'إغلاق AI' : 'AI Assistant'}
                             </button>
                         </div>
                         
@@ -966,11 +1009,11 @@ const Simulator: React.FC = () => {
                         </button>
                         
                         <button 
-                           onClick={handleReset}
-                           className="px-4 py-3 bg-white/5 hover:bg-white/10 text-white rounded-xl border border-white/10 transition hover:border-white/30"
-                           title="إعادة ضبط"
+                            onClick={handleReset}
+                            className="px-4 py-3 bg-white/5 hover:bg-red-500/20 hover:text-red-400 text-gray-400 rounded-xl border border-white/10 transition hover:border-red-500/30"
+                            title="إعادة ضبط"
                         >
-                           <RotateCcw size={20} />
+                            <RotateCcw size={20} />
                         </button>
                      </div>
                    </>
@@ -978,215 +1021,177 @@ const Simulator: React.FC = () => {
 
                 {/* CONFIG TAB */}
                 {activeTab === 'config' && (
-                    <div className="flex flex-col h-full bg-[#0F1216]">
-                        <div className="p-4 border-b border-white/10 bg-secondary/50">
-                            <p className="text-xs text-gray-400 flex items-center gap-2">
-                                <Package size={14} className="text-accent" />
-                                اسحب القطع من الأسفل إلى أماكنها المحددة.
-                            </p>
-                        </div>
+                   <div className="flex-1 flex flex-col bg-[#15191e] overflow-hidden">
+                       <div className="flex-1 p-6 relative flex flex-col items-center justify-center overflow-y-auto custom-scrollbar">
+                           <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-white/5 via-transparent to-transparent pointer-events-none"></div>
+                           
+                           <div className="relative w-[320px] h-[480px] bg-[#0F1216] border-2 border-white/10 rounded-3xl shadow-2xl p-6 flex flex-col items-center justify-between z-10">
+                               {/* Processor */}
+                               <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-20 h-20 bg-black border border-white/20 rounded-lg flex items-center justify-center z-10 shadow-[0_0_30px_rgba(0,0,0,0.8)]">
+                                   <Cpu size={32} className="text-gray-500" />
+                                   <div className="absolute -bottom-6 text-[10px] text-gray-500 font-mono">CORE</div>
+                               </div>
 
-                        {/* Interactive Blueprint Area */}
-                        <div className="flex-1 p-6 flex flex-col items-center justify-center overflow-hidden relative bg-grid">
-                            
-                            <div className="relative animate-in zoom-in-95 duration-500">
-                                {/* Chassis Lines / Wires */}
-                                <div className="absolute top-1/2 left-0 w-full h-[2px] bg-gradient-to-r from-transparent via-white/10 to-transparent"></div>
-                                <div className="absolute left-1/2 top-0 h-full w-[2px] bg-gradient-to-b from-transparent via-white/10 to-transparent"></div>
+                               {/* Top/Front Slot */}
+                               {renderDropZone('front', 'Front Sensor', <ScanEye size={24} className="mb-2" />)}
 
-                                {/* Central Core */}
-                                <div className="w-32 h-32 bg-[#1A1E24] rounded-2xl border-2 border-white/20 flex flex-col items-center justify-center z-10 relative shadow-[0_0_50px_rgba(0,0,0,0.5)]">
-                                    {getIssueForLocation('center') && renderIssueMarker(getIssueForLocation('center')!)}
-                                    
-                                    <Cpu size={40} className="text-white/80 mb-2" />
-                                    <span className="text-[10px] text-gray-500 font-mono tracking-widest uppercase">Central Unit</span>
-                                    <div className="absolute top-2 right-2 flex gap-1">
-                                        <div className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></div>
-                                        <div className="w-1.5 h-1.5 bg-blue-500 rounded-full animate-pulse delay-75"></div>
-                                    </div>
-                                    {/* Wire Connectors */}
-                                    <div className="absolute top-[-10px] left-1/2 -translate-x-1/2 w-8 h-2 bg-white/20 rounded"></div>
-                                    <div className="absolute bottom-[-10px] left-1/2 -translate-x-1/2 w-8 h-2 bg-white/20 rounded"></div>
-                                    <div className="absolute left-[-10px] top-1/2 -translate-y-1/2 h-8 w-2 bg-white/20 rounded"></div>
-                                    <div className="absolute right-[-10px] top-1/2 -translate-y-1/2 h-8 w-2 bg-white/20 rounded"></div>
+                               <div className="flex justify-between w-full relative">
+                                   {/* Left Slot */}
+                                   {renderDropZone('left', 'Left Motor', <Cog size={24} className="mb-2" />)}
+                                   
+                                   {/* Right Slot */}
+                                   {renderDropZone('right', 'Right Motor', <Cog size={24} className="mb-2" />)}
+                               </div>
+
+                               {/* Bottom/Back Slot */}
+                               {renderDropZone('back', 'Rear Module', <Battery size={24} className="mb-2" />)}
+                           </div>
+                           
+                           {/* Power Stats */}
+                           <div className="mt-8 flex gap-6 text-xs text-gray-500 font-mono">
+                               <div className="flex flex-col items-center">
+                                   <span className="text-white font-bold text-lg">{(robotConfig.power.consumptionPerTick * 20).toFixed(1)}W</span>
+                                   <span>Est. Power Draw</span>
+                               </div>
+                               <div className="w-px h-8 bg-white/10"></div>
+                               <div className="flex flex-col items-center">
+                                   <span className="text-green-400 font-bold text-lg">100%</span>
+                                   <span>Battery Health</span>
+                               </div>
+                           </div>
+                       </div>
+
+                       {/* Inventory Panel */}
+                       <div className="h-48 bg-black/40 border-t border-white/10 p-4 overflow-y-auto">
+                            <div className="flex items-center justify-between mb-3 px-1">
+                                <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider flex items-center gap-2">
+                                    <Package size={14} />
+                                    المخزون المتوفر
+                                </h3>
+                                <div className="flex gap-2">
+                                    <button onClick={() => setPartsFilter('all')} className={`px-2 py-1 rounded text-[10px] ${partsFilter === 'all' ? 'bg-white/10 text-white' : 'text-gray-500'}`}>الكل</button>
+                                    <button onClick={() => setPartsFilter('motor')} className={`px-2 py-1 rounded text-[10px] ${partsFilter === 'motor' ? 'bg-white/10 text-white' : 'text-gray-500'}`}>محركات</button>
+                                    <button onClick={() => setPartsFilter('sensor')} className={`px-2 py-1 rounded text-[10px] ${partsFilter === 'sensor' ? 'bg-white/10 text-white' : 'text-gray-500'}`}>حساسات</button>
                                 </div>
-
-                                {/* Drop Zones */}
-                                <div className="absolute -top-36 left-4">{renderDropZone('front', 'المقدمة', <ArrowUp size={24} />)}</div>
-                                <div className="absolute -bottom-36 left-4">{renderDropZone('back', 'المؤخرة', <ArrowDown size={24} />)}</div>
-                                <div className="absolute top-4 -left-36">{renderDropZone('left', 'محرك أيسر', <ArrowLeft size={24} />)}</div>
-                                <div className="absolute top-4 -right-36">{renderDropZone('right', 'محرك أيمن', <ArrowRight size={24} />)}</div>
                             </div>
-                        </div>
-
-                        {/* Parts Box (Previously Inventory Drawer) */}
-                        <div className="h-56 bg-[#15191E] border-t border-white/10 flex flex-col shadow-[0_-5px_20px_rgba(0,0,0,0.3)]">
-                             <div className="flex items-center justify-between p-3 border-b border-white/5 bg-secondary/80">
-                                <div className="flex items-center gap-4">
-                                    <h4 className="text-xs font-bold text-gray-300 uppercase flex items-center gap-2">
-                                        <GripHorizontal size={14} className="text-gray-500" />
-                                        صندوق القطع (Parts Box)
-                                    </h4>
-                                    <div className="flex gap-1">
-                                        <button 
-                                            onClick={() => setPartsFilter('all')}
-                                            className={`px-3 py-1 text-[10px] rounded-full border transition-all ${partsFilter === 'all' ? 'bg-accent text-white border-accent' : 'bg-transparent text-gray-500 border-white/10 hover:border-white/30 hover:text-gray-300'}`}
-                                        >الكل</button>
-                                        <button 
-                                            onClick={() => setPartsFilter('motor')}
-                                            className={`px-3 py-1 text-[10px] rounded-full border transition-all ${partsFilter === 'motor' ? 'bg-accent text-white border-accent' : 'bg-transparent text-gray-500 border-white/10 hover:border-white/30 hover:text-gray-300'}`}
-                                        >محركات</button>
-                                        <button 
-                                            onClick={() => setPartsFilter('sensor')}
-                                            className={`px-3 py-1 text-[10px] rounded-full border transition-all ${partsFilter === 'sensor' ? 'bg-accent text-white border-accent' : 'bg-transparent text-gray-500 border-white/10 hover:border-white/30 hover:text-gray-300'}`}
-                                        >حساسات</button>
-                                    </div>
-                                </div>
-                                <span className="text-[10px] text-gray-500 bg-black/40 px-2 py-1 rounded border border-white/5">
-                                    Total Power: <span className="text-white font-bold">{[robotConfig.slots.front, robotConfig.slots.back, robotConfig.slots.left, robotConfig.slots.right].reduce((acc, slot) => acc + (slot?.powerConsumption || 0), 0) + 0.5} W</span>
-                                </span>
-                             </div>
-                             <div className="flex gap-4 overflow-x-auto p-4 custom-scrollbar flex-1 items-center bg-[#0F1216]">
-                                {AVAILABLE_COMPONENTS
-                                    .filter(c => {
-                                        if (partsFilter === 'all') return true;
-                                        if (partsFilter === 'motor') return c.type.includes('motor');
-                                        if (partsFilter === 'sensor') return !c.type.includes('motor');
-                                        return true;
-                                    })
-                                    .map(component => (
+                            <div className="grid grid-cols-4 sm:grid-cols-6 gap-3">
+                                {AVAILABLE_COMPONENTS.filter(c => partsFilter === 'all' || (partsFilter === 'motor' ? c.type === 'motor' : c.type !== 'motor')).map(comp => (
                                     <div 
-                                        key={component.id}
+                                        key={comp.id}
                                         draggable
-                                        onDragStart={(e) => handleDragStart(e, component)}
+                                        onDragStart={(e) => handleDragStart(e, comp)}
                                         onDragEnd={handleDragEnd}
-                                        className="flex-shrink-0 w-32 h-32 bg-[#1A1E24] border border-white/10 rounded-xl p-3 cursor-grab hover:border-accent hover:shadow-[0_0_20px_rgba(45,137,229,0.2)] transition-all active:cursor-grabbing flex flex-col items-center justify-center text-center group hover:-translate-y-1 relative overflow-hidden active:scale-95"
+                                        className="bg-secondary p-2 rounded-lg border border-white/5 hover:border-white/20 hover:bg-white/5 cursor-grab active:cursor-grabbing flex flex-col items-center gap-1 group transition-all"
                                     >
-                                        <div className="absolute top-2 right-2 p-1 rounded-full bg-black/40 text-gray-500 text-[8px] font-bold border border-white/5">
-                                           {component.type.includes('motor') ? 'M' : 'S'}
+                                        <div className="p-2 bg-black/30 rounded-full group-hover:scale-110 transition-transform">
+                                            {comp.type === 'motor' ? <Zap size={16} className="text-yellow-500" /> : 
+                                             comp.type === 'camera' ? <Bot size={16} className="text-blue-500" /> :
+                                             <Activity size={16} className="text-green-500" />}
                                         </div>
-                                        <div className="mb-3 text-gray-400 group-hover:text-white transition-colors bg-black/30 p-3 rounded-full group-hover:bg-accent/20 border border-white/5 group-hover:border-accent/30">
-                                            {component.type.includes('motor') ? <Zap size={24} /> : 
-                                             component.type.includes('camera') ? <Bot size={24} /> :
-                                             <Activity size={24} />}
-                                        </div>
-                                        <span className="text-xs font-bold text-gray-200 leading-tight mb-2 group-hover:text-white">{component.name}</span>
-                                        <div className="flex items-center gap-1.5 bg-black/40 px-2 py-1 rounded text-[9px] border border-white/5">
-                                            <Zap size={10} className="text-yellow-500" />
-                                            <span className="font-mono text-gray-400">{component.powerConsumption}W</span>
-                                        </div>
+                                        <span className="text-[10px] font-bold text-gray-300 text-center leading-tight line-clamp-2">{comp.name}</span>
                                     </div>
                                 ))}
-                             </div>
-                        </div>
-                    </div>
+                            </div>
+                       </div>
+                   </div>
                 )}
 
                 {/* CHAT TAB */}
                 {activeTab === 'chat' && (
-                   <div className="flex flex-col h-full bg-[#0F1216]">
-                      {/* Header with Clear Action */}
-                      {chatMessages.length > 0 && (
-                          <div className="p-2 border-b border-white/5 flex justify-end">
-                              <button 
-                                onClick={() => setChatMessages([])}
-                                className="text-[10px] text-gray-500 hover:text-red-400 flex items-center gap-1 px-2 py-1 rounded hover:bg-white/5 transition"
-                              >
-                                  <Trash2 size={12} />
-                                  مسح المحادثة
-                              </button>
-                          </div>
-                      )}
+                    <div className="flex-1 flex flex-col bg-[#0d1117]">
+                        <div className="flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar">
+                             {/* Intro Message */}
+                             <div className="flex gap-3">
+                                <div className="w-8 h-8 rounded-full bg-accent flex items-center justify-center flex-shrink-0">
+                                    <Bot size={16} className="text-white" />
+                                </div>
+                                <div className="bg-white/5 p-3 rounded-2xl rounded-tl-none text-sm text-gray-300 border border-white/5 max-w-[85%]">
+                                    <p>مرحباً بك! أنا مساعدك الذكي في منصة مُلَقّن. 🤖</p>
+                                    <p className="mt-2 text-xs text-gray-400">يمكنني مساعدتك في:</p>
+                                    <ul className="list-disc list-inside mt-1 text-xs text-gray-400 space-y-1">
+                                        <li>شرح الأكواد وتصحيحها</li>
+                                        <li>اقتراح تصميمات للروبوت</li>
+                                        <li>الإجابة عن مفاهيم الروبوتات</li>
+                                    </ul>
+                                </div>
+                             </div>
 
-                      {/* Messages Area */}
-                      <div className="flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar">
-                         {chatMessages.length === 0 && (
-                            <div className="flex flex-col items-center justify-center h-full text-center text-gray-500 opacity-80 animate-in fade-in zoom-in duration-500">
-                               <div className="w-16 h-16 bg-white/5 rounded-2xl flex items-center justify-center mb-4 border border-white/5">
-                                    <Bot size={32} className="text-accent" />
-                               </div>
-                               <p className="text-sm font-bold text-white mb-2">مساعد مُلَقّن الذكي</p>
-                               <p className="text-xs leading-relaxed max-w-[250px] mx-auto mb-6">
-                                  اسألني عن الأكواد، أو اطلب مني شرحاً للمكونات، أو ساعدني في حل مشكلة برمجية.
-                               </p>
-                               
-                               <div className="grid grid-cols-1 gap-2 w-full max-w-[260px]">
-                                   <button 
-                                      onClick={() => handleQuickAction('analyze')}
-                                      className="text-xs bg-white/5 hover:bg-white/10 border border-white/5 rounded-lg py-2.5 px-3 text-left transition flex items-center gap-2 group"
-                                   >
-                                      <FileCode size={14} className="text-purple-400 group-hover:scale-110 transition-transform" />
-                                      اكتشف الأخطاء في الكود
-                                   </button>
-                                   <button 
-                                      onClick={() => handleQuickAction('design')}
-                                      className="text-xs bg-white/5 hover:bg-white/10 border border-white/5 rounded-lg py-2.5 px-3 text-left transition flex items-center gap-2 group"
-                                   >
-                                      <Cpu size={14} className="text-blue-400 group-hover:scale-110 transition-transform" />
-                                      تحسين تصميم الروبوت
-                                   </button>
-                                   <button 
-                                      onClick={() => handleQuickAction('explain')}
-                                      className="text-xs bg-white/5 hover:bg-white/10 border border-white/5 rounded-lg py-2.5 px-3 text-left transition flex items-center gap-2 group"
-                                   >
-                                      <HelpCircle size={14} className="text-green-400 group-hover:scale-110 transition-transform" />
-                                      شرح الأوامر المتاحة
-                                   </button>
-                               </div>
-                            </div>
-                         )}
-                         
-                         {chatMessages.map((msg, idx) => (
-                            <div key={idx} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                               <div className={`max-w-[85%] rounded-2xl p-3 text-sm leading-relaxed shadow-sm whitespace-pre-wrap
-                                  ${msg.role === 'user' 
-                                     ? 'bg-accent text-white rounded-br-none' 
-                                     : 'bg-[#1A1E24] border border-white/10 text-gray-200 rounded-bl-none'
-                                  }
-                               `}>
-                                  {msg.role === 'model' ? renderMessageText(msg.text) : msg.text}
-                               </div>
-                            </div>
-                         ))}
-                         
-                         {isChatLoading && (
-                            <div className="flex justify-start">
-                               <div className="bg-white/5 rounded-2xl p-3 rounded-bl-none flex gap-2">
-                                  <div className="w-1.5 h-1.5 bg-gray-500 rounded-full animate-bounce"></div>
-                                  <div className="w-1.5 h-1.5 bg-gray-500 rounded-full animate-bounce delay-100"></div>
-                                  <div className="w-1.5 h-1.5 bg-gray-500 rounded-full animate-bounce delay-200"></div>
-                               </div>
-                            </div>
-                         )}
-                         <div ref={chatEndRef}></div>
-                      </div>
+                             {chatMessages.map((msg, idx) => (
+                                <div key={idx} className={`flex gap-3 ${msg.role === 'user' ? 'flex-row-reverse' : ''} animate-in fade-in slide-in-from-bottom-2`}>
+                                    <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${msg.role === 'user' ? 'bg-white/10' : 'bg-accent'}`}>
+                                        {msg.role === 'user' ? <User size={16} className="text-white" /> : <Bot size={16} className="text-white" />}
+                                    </div>
+                                    <div className={`p-3 rounded-2xl text-sm max-w-[85%] leading-relaxed border ${msg.role === 'user' ? 'bg-blue-600/20 border-blue-500/30 text-white rounded-tr-none' : 'bg-white/5 border-white/5 text-gray-300 rounded-tl-none'}`}>
+                                        {msg.role === 'model' ? renderMessageText(msg.text) : msg.text}
+                                    </div>
+                                </div>
+                             ))}
+                             
+                             {isChatLoading && (
+                                <div className="flex gap-3 animate-pulse">
+                                    <div className="w-8 h-8 rounded-full bg-accent flex items-center justify-center flex-shrink-0">
+                                        <Bot size={16} className="text-white" />
+                                    </div>
+                                    <div className="bg-white/5 p-3 rounded-2xl rounded-tl-none border border-white/5 flex items-center gap-1">
+                                        <div className="w-1.5 h-1.5 bg-gray-500 rounded-full animate-bounce"></div>
+                                        <div className="w-1.5 h-1.5 bg-gray-500 rounded-full animate-bounce delay-100"></div>
+                                        <div className="w-1.5 h-1.5 bg-gray-500 rounded-full animate-bounce delay-200"></div>
+                                    </div>
+                                </div>
+                             )}
+                             <div ref={chatEndRef}></div>
+                        </div>
 
-                      {/* Input Area */}
-                      <form onSubmit={(e) => handleChatSubmit(e)} className="p-4 bg-secondary border-t border-white/10 flex gap-2">
-                         <input 
-                            type="text" 
-                            value={chatInput}
-                            onChange={(e) => setChatInput(e.target.value)}
-                            placeholder="اكتب سؤالك هنا..."
-                            disabled={isChatLoading}
-                            className="flex-1 bg-black border border-white/10 rounded-xl px-4 py-3 text-white text-sm focus:border-accent focus:outline-none transition-colors disabled:opacity-50"
-                         />
-                         <button 
-                            type="submit" 
-                            disabled={isChatLoading || !chatInput.trim()} 
-                            className="bg-white/10 hover:bg-white/20 text-white p-3 rounded-xl transition disabled:opacity-50 border border-white/5"
-                         >
-                            <Send size={18} />
-                         </button>
-                      </form>
-                   </div>
+                        {/* Quick Actions */}
+                        {chatMessages.length < 2 && (
+                            <div className="px-4 pb-2 flex gap-2 overflow-x-auto custom-scrollbar">
+                                <button onClick={() => handleQuickAction('analyze')} className="whitespace-nowrap px-3 py-1.5 bg-white/5 hover:bg-white/10 border border-white/10 rounded-full text-xs text-gray-400 hover:text-white transition">🔍 حلل الكود</button>
+                                <button onClick={() => handleQuickAction('design')} className="whitespace-nowrap px-3 py-1.5 bg-white/5 hover:bg-white/10 border border-white/10 rounded-full text-xs text-gray-400 hover:text-white transition">🛠 نصائح تصميم</button>
+                                <button onClick={() => handleQuickAction('explain')} className="whitespace-nowrap px-3 py-1.5 bg-white/5 hover:bg-white/10 border border-white/10 rounded-full text-xs text-gray-400 hover:text-white transition">📚 شرح الأوامر</button>
+                            </div>
+                        )}
+
+                        {/* Chat Input */}
+                        <div className="p-4 border-t border-white/10 bg-black/20">
+                            <form 
+                                onSubmit={(e) => handleChatSubmit(e)}
+                                className="relative flex items-center gap-2"
+                            >
+                                <input 
+                                    type="text" 
+                                    value={chatInput}
+                                    onChange={(e) => setChatInput(e.target.value)}
+                                    placeholder="اكتب سؤالك هنا..."
+                                    className="flex-1 bg-secondary border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-accent transition-colors pr-10"
+                                    disabled={isStreaming || isChatLoading}
+                                />
+                                <button 
+                                    type="submit"
+                                    disabled={!chatInput.trim() || isStreaming || isChatLoading}
+                                    className="absolute left-2 p-1.5 bg-accent hover:bg-accentHover text-white rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition"
+                                >
+                                    {isStreaming ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />}
+                                </button>
+                            </form>
+                        </div>
+                    </div>
                 )}
+
              </div>
           </div>
 
        </div>
+
+       {/* Helper Icons for Drag & Drop that were undefined */}
+       <div className="hidden">
+           {/* These are used in the renderDropZone function but imported inside the component */}
+       </div>
     </div>
   );
 };
+
+// Simple Icon Wrappers for cleaner JSX in DropZone
+const ScanEye = ({size, className}: {size:number, className?:string}) => <div className={className}><Activity size={size} /></div>;
+const Cog = ({size, className}: {size:number, className?:string}) => <div className={className}><Settings size={size} /></div>;
 
 export default Simulator;

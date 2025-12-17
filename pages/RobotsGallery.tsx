@@ -26,10 +26,10 @@ const PROJECTS: RobotProject[] = [
     category: 'استكشاف',
     description: 'روبوت استكشافي متعدد التضاريس مصمم للبيئات الوعرة. يعتمد على نظام تعليق مستقل.',
     fullDescription: 'تم تصميم X-Rover ليكون الحل الأمثل لمهام الاستكشاف في البيئات الخطرة أو التي يصعب الوصول إليها. يتميز بنظام دفع سداسي العجلات مع تعليق مستقل لكل عجلة، مما يسمح له بتسلق العقبات بزاوية تصل إلى 45 درجة. مزود بكاميرات حرارية ومستشعرات غاز.',
-    image: 'https://images.unsplash.com/photo-1534723328310-e82dad3af43f?auto=format&fit=crop&q=80&w=800',
+    image: 'https://images.unsplash.com/photo-1614728263952-84ea256f9679?q=80&w=800&auto=format&fit=crop',
     gallery: [
-        'https://images.unsplash.com/photo-1534723328310-e82dad3af43f?auto=format&fit=crop&q=80&w=800',
-        'https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?auto=format&fit=crop&q=80&w=800'
+        'https://images.unsplash.com/photo-1614728263952-84ea256f9679?q=80&w=800&auto=format&fit=crop',
+        'https://images.unsplash.com/photo-1542751371-adc38448a05e?q=80&w=800&auto=format&fit=crop'
     ],
     specs: {
       weight: '4.5 kg',
@@ -45,7 +45,7 @@ const PROJECTS: RobotProject[] = [
     category: 'صناعي',
     description: 'ذراع روبوتية دقيقة بـ 6 محاور حرية، مثالية لخطوط التجميع والمهام الدقيقة.',
     fullDescription: 'ذراع Titan V3 تمثل قمة الدقة في الروبوتات الصناعية الخفيفة. بفضل محركاتها المؤازرة (Servos) عالية العزم وخوارزميات التحكم المتقدمة، يمكنها أداء مهام التجميع واللحام بدقة تصل إلى 0.1 ملم. تدعم البرمجة المباشرة عبر التحريك اليدوي (Lead-through programming).',
-    image: 'https://images.unsplash.com/photo-1561144257-e1555cb6d518?auto=format&fit=crop&q=80&w=800',
+    image: 'https://images.unsplash.com/photo-1581092580497-e0d23cbdf1dc?q=80&w=800&auto=format&fit=crop',
     specs: {
       weight: '8.2 kg',
       battery: 'AC Power',
@@ -60,7 +60,7 @@ const PROJECTS: RobotProject[] = [
     category: 'مراقبة',
     description: 'طائرة بدون طيار ذاتية القيادة للمراقبة الجوية ورسم الخرائط ثلاثية الأبعاد.',
     fullDescription: 'طائرة AeroGuard مصممة للمهام الأمنية والمسح الجوي. تعتمد على نظام ملاحة مزدوج (GPS + Vision) للعمل حتى في البيئات التي تفتقر لإشارة الأقمار الصناعية. هيكلها المصنوع من ألياف الكربون يمنحها خفة وقوة استثنائية.',
-    image: 'https://images.unsplash.com/photo-1506947411487-a56738267384?auto=format&fit=crop&q=80&w=800',
+    image: 'https://images.unsplash.com/photo-1527977966376-1c8408f9f108?q=80&w=800&auto=format&fit=crop',
     specs: {
       weight: '1.2 kg',
       battery: '30 mins',
@@ -75,7 +75,7 @@ const PROJECTS: RobotProject[] = [
     category: 'تعليمي',
     description: 'روبوت سداسي الأرجل يحاكي حركة الحشرات، ممتاز لدراسة الكينماتيكا العكسية.',
     fullDescription: 'مشروع تعليمي مفتوح المصدر يهدف لتعليم طلاب الهندسة مفاهيم الحركة المعقدة (Locomotion). يحتوي الروبوت على 18 محرك سيرفو، مما يمنحه حرية حركة تحاكي العناكب الحقيقية. يمكن التحكم به عبر تطبيق هاتف أو ذراع تحكم.',
-    image: 'https://images.unsplash.com/photo-1535378437327-10f76365c4df?auto=format&fit=crop&q=80&w=800',
+    image: 'https://images.unsplash.com/photo-1563770095125-e6a07a6809f5?q=80&w=800&auto=format&fit=crop',
     specs: {
       weight: '2.1 kg',
       battery: '2200 mAh',
@@ -90,7 +90,7 @@ const PROJECTS: RobotProject[] = [
     category: 'خدمي',
     description: 'روبوت مساعد للمستشفيات لنقل الأدوية والتعامل مع المرضى عن بعد.',
     fullDescription: 'روبوت مستقل الحركة قادر على التنقل في ممرات المستشفيات المزدحمة وتفادي البشر. مزود بشاشة تفاعلية للتواصل بين الطبيب والمريض، وصندوق معقم لنقل العينات الطبية والأدوية.',
-    image: 'https://images.unsplash.com/photo-1531746790731-6c087fecd65a?auto=format&fit=crop&q=80&w=800',
+    image: 'https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?q=80&w=800&auto=format&fit=crop',
     specs: {
       weight: '15 kg',
       battery: '8 Hours',
@@ -105,7 +105,7 @@ const PROJECTS: RobotProject[] = [
     category: 'بحري',
     description: 'روبوت غواص (ROV) لاستكشاف الأعماق وفحص هياكل السفن.',
     fullDescription: 'روبوت تحت مائي صغير الحجم وقوي الأداء. يستخدم لفحص بدن السفن، استكشاف الشعاب المرجانية، والبحث والإنقاذ. مزود بكشافات LED قوية وكاميرا عالية الدقة تعمل في ظروف الإضاءة المنخفضة.',
-    image: 'https://images.unsplash.com/photo-1627845348873-10e3039f60f6?auto=format&fit=crop&q=80&w=800',
+    image: 'https://images.unsplash.com/photo-1544551763-46a013bb70d5?q=80&w=800&auto=format&fit=crop',
     specs: {
       weight: '6.0 kg',
       battery: '4 Hours',

@@ -26,6 +26,7 @@ export class SimulationEngine {
     const logs: string[] = [];
     let moved = false;
     let collisionDetected = false;
+    let collisionPoint: { x: number, y: number } | undefined = undefined;
 
     // 1. Power Consumption Logic
     const drain = this.robot.power.consumptionPerTick;
@@ -70,6 +71,7 @@ export class SimulationEngine {
              logs.push("COLLISION_IMPACT");
              this.state.battery -= 5; // Impact penalty
              collisionDetected = true;
+             collisionPoint = { x: nextX, y: nextY };
            } else {
              this.state.x = nextX;
              this.state.y = nextY;
@@ -80,6 +82,7 @@ export class SimulationEngine {
            logs.push("COLLISION_IMPACT");
            this.state.battery -= 2;
            collisionDetected = true;
+           // For boundary collisions, we can roughly set the point "outside" or just not return a point
          }
        }
     } else if (command === RobotCommand.TURN_RIGHT) {
@@ -102,7 +105,8 @@ export class SimulationEngine {
       temperature: this.state.temperature,
       sensors,
       logs,
-      moved
+      moved,
+      collisionPoint
     };
   }
 

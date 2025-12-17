@@ -94,4 +94,5 @@ export interface SimulationStepResult {
   sensors: SensorReadings;
   logs: string[];
   moved: boolean;
+  collisionPoint?: { x: number; y: number };
 }

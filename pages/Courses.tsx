@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { PlayCircle, Clock, BookOpen, CheckCircle, ArrowRight, Star, Filter, Cpu, Code, Zap, Settings, Search, X, Award, Signal, Anchor, Wind } from 'lucide-react';
+import { PlayCircle, Clock, BookOpen, CheckCircle, ArrowRight, Star, Filter, Cpu, Code, Zap, Settings, Search, X, Award, Signal, Anchor, Wind, ShoppingCart } from 'lucide-react';
 import { Course } from '../types';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 
 export const COURSES: Course[] = [
   {
@@ -134,6 +135,8 @@ const CATEGORIES = [
 const Courses: React.FC = () => {
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
+  const { user } = useAuth();
+  const navigate = useNavigate();
 
   const filteredCourses = COURSES.filter(course => {
     const matchesCategory = selectedCategory === 'all' || course.category === selectedCategory;
@@ -141,6 +144,22 @@ const Courses: React.FC = () => {
                           course.description.toLowerCase().includes(searchQuery.toLowerCase());
     return matchesCategory && matchesSearch;
   });
+
+  const handleBuyCourse = (e: React.MouseEvent, courseId: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    if (!user) {
+        navigate('/login');
+    } else {
+        // Navigate to details page where the actual enrollment/purchase flow exists
+        navigate(`/courses/${courseId}`);
+    }
+  };
+
+  const handleCardClick = (courseId: string) => {
+      navigate(`/courses/${courseId}`);
+  };
 
   return (
     <div className="min-h-screen bg-primary py-12 font-sans selection:bg-accent/30">
@@ -193,7 +212,11 @@ const Courses: React.FC = () => {
         {filteredCourses.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
             {filteredCourses.map((course) => (
-              <Link to={`/courses/${course.id}`} key={course.id} className="group bg-[#15191E] rounded-3xl border border-white/5 overflow-hidden hover:border-accent/40 hover:shadow-[0_10px_40px_-10px_rgba(45,137,229,0.15)] transition-all duration-300 flex flex-col h-full hover:-translate-y-2">
+              <div 
+                key={course.id} 
+                onClick={() => handleCardClick(course.id)}
+                className="group bg-[#15191E] rounded-3xl border border-white/5 overflow-hidden hover:border-accent/40 hover:shadow-[0_10px_40px_-10px_rgba(45,137,229,0.15)] transition-all duration-300 flex flex-col h-full hover:-translate-y-2 cursor-pointer"
+              >
                 
                 {/* Image */}
                 <div className="relative h-56 overflow-hidden">
@@ -267,19 +290,22 @@ const Courses: React.FC = () => {
                        </span>
                     </div>
                     
-                    <span
-                      className={`h-10 w-10 rounded-full flex items-center justify-center transition-all border
-                        ${course.price === 'free' 
-                          ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20 group-hover:bg-emerald-500 group-hover:text-white' 
-                          : 'bg-white/5 text-gray-400 border-white/10 group-hover:bg-accent group-hover:text-white group-hover:border-accent'
-                        }
-                      `}
-                    >
-                      <ArrowRight size={18} className="transform group-hover:-translate-x-0.5 transition-transform" />
-                    </span>
+                    {course.price === 'free' ? (
+                        <span className="h-10 w-10 rounded-full flex items-center justify-center transition-all border bg-emerald-500/10 text-emerald-400 border-emerald-500/20 group-hover:bg-emerald-500 group-hover:text-white">
+                            <ArrowRight size={18} className="transform group-hover:-translate-x-0.5 transition-transform" />
+                        </span>
+                    ) : (
+                        <button 
+                            onClick={(e) => handleBuyCourse(e, course.id)}
+                            className="px-5 py-2.5 rounded-xl bg-accent hover:bg-accentHover text-white text-sm font-bold shadow-lg shadow-accent/20 transition-all flex items-center gap-2 z-20 relative hover:scale-105 active:scale-95"
+                        >
+                            <ShoppingCart size={16} />
+                            شراء الدورة
+                        </button>
+                    )}
                   </div>
                 </div>
-              </Link>
+              </div>
             ))}
           </div>
         ) : (

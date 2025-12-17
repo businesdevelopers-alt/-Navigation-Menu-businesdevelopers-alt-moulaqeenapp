@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { ShoppingCart, Search, Filter, X, DollarSign, Eye, Check, Zap, Cpu, Settings, Star, ArrowRight, Package, Heart, ImageOff, Plus, ShoppingBag, Wand2, RefreshCw } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { ShoppingCart, Search, Filter, X, DollarSign, Eye, Zap, Cpu, Settings, Star, ShoppingBag, Wand2, RefreshCw, SearchX, Plus, Image as ImageIcon, Sparkles, ArrowRight } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { GoogleGenAI } from "@google/genai";
 import { useCart } from '../context/CartContext';
@@ -26,6 +26,24 @@ const Store: React.FC = () => {
   const [generatedImages, setGeneratedImages] = useState<{[key:string]: string}>({});
   const [generatingIds, setGeneratingIds] = useState<{[key:string]: boolean}>({});
 
+  // Persistence for generated images
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem('mulaqqen_generated_images');
+      if (stored) {
+        setGeneratedImages(JSON.parse(stored));
+      }
+    } catch (e) {
+      console.error('Failed to load images', e);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (Object.keys(generatedImages).length > 0) {
+      localStorage.setItem('mulaqqen_generated_images', JSON.stringify(generatedImages));
+    }
+  }, [generatedImages]);
+
   const handleImageLoad = (id: string) => {
     setLoadedImages(prev => ({...prev, [id]: true}));
   };
@@ -41,7 +59,13 @@ const Store: React.FC = () => {
         const response = await ai.models.generateContent({
             model: 'gemini-2.5-flash-image',
             contents: {
-                parts: [{ text: `Professional product photography of ${product.name}, ${product.description}. High tech, futuristic robotic component, cinematic lighting, 8k resolution, highly detailed, photorealistic, isolated on a sleek dark technical background.` }]
+                parts: [{ text: `Professional product photography of ${product.name} - ${product.description}. 
+                Style: High-tech industrial robotics equipment. 
+                Lighting: Dramatic cinematic lighting with subtle blue and orange rim lights (cyberpunk style). 
+                Material: Brushed metal, carbon fiber, matte plastic.
+                Background: Solid dark grey background (Hex color #1A1E24), clean and minimal.
+                View: Isometric or 3/4 perspective.
+                Quality: 8k resolution, highly detailed, photorealistic, sharp focus, no text overlay.` }]
             },
             config: {
                 imageConfig: { aspectRatio: "1:1" }
@@ -163,7 +187,7 @@ const Store: React.FC = () => {
           <div className="w-full lg:w-64 flex-shrink-0 space-y-6">
              
              {/* Category Filter */}
-             <div className="bg-secondary/50 backdrop-blur-sm border border-white/5 rounded-xl p-5 shadow-inner">
+             <div className="bg-secondary/50 backdrop-blur-sm border border-white/5 rounded-2xl p-5 shadow-sm">
                 <h3 className="text-white font-bold mb-4 flex items-center gap-2 text-xs uppercase tracking-wider opacity-70">
                    <Filter size={14} />
                    التصنيف
@@ -173,19 +197,22 @@ const Store: React.FC = () => {
                     <button
                         key={cat.id}
                         onClick={() => toggleCategory(cat.id as any)}
-                        className={`w-full text-right px-3 py-3 rounded-lg text-xs font-bold transition-all duration-200 flex items-center justify-between group relative overflow-hidden
+                        className={`w-full text-right px-4 py-3 rounded-xl text-xs font-bold transition-all duration-300 flex items-center justify-between group relative overflow-hidden border
                           ${selectedCategories.includes(cat.id as any) 
-                            ? 'bg-accent/10 text-white border border-accent shadow-[0_0_10px_rgba(45,137,229,0.1)]' 
-                            : 'text-gray-400 bg-transparent border border-transparent hover:bg-white/5 hover:text-white'
+                            ? 'bg-accent/10 text-white border-accent shadow-[0_0_15px_rgba(45,137,229,0.15)]' 
+                            : 'text-gray-400 bg-transparent border-white/5 hover:bg-white/5 hover:text-white hover:border-white/20'
                           }
                         `}
                       >
                         <div className="flex items-center gap-3 relative z-10">
-                            <cat.icon size={16} className={`transition-colors ${selectedCategories.includes(cat.id as any) ? cat.color : 'text-gray-600 group-hover:text-gray-300'}`} />
+                            <cat.icon size={16} className={`transition-colors duration-300 ${selectedCategories.includes(cat.id as any) ? 'text-accent' : 'text-gray-500 group-hover:text-gray-300'}`} />
                             {cat.label}
                         </div>
                         {selectedCategories.includes(cat.id as any) && (
-                           <span className="w-2 h-2 rounded-full bg-accent animate-pulse shadow-[0_0_8px_currentColor]"></span>
+                           <div className="relative flex h-2 w-2">
+                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-accent opacity-75"></span>
+                                <span className="relative inline-flex rounded-full h-2 w-2 bg-accent"></span>
+                           </div>
                         )}
                       </button>
                   ))}
@@ -193,7 +220,7 @@ const Store: React.FC = () => {
              </div>
 
              {/* Price Filter (Min/Max Inputs) */}
-             <div className="bg-secondary/50 backdrop-blur-sm border border-white/5 rounded-xl p-5 shadow-inner">
+             <div className="bg-secondary/50 backdrop-blur-sm border border-white/5 rounded-2xl p-5 shadow-sm">
                 <h3 className="text-white font-bold mb-4 flex items-center gap-2 text-xs uppercase tracking-wider opacity-70">
                    <DollarSign size={14} />
                    نطاق السعر (ر.س)
@@ -240,147 +267,136 @@ const Store: React.FC = () => {
                 {filteredProducts.map((product) => {
                   const hasImage = (product.image && product.image.trim() !== '') && !failedImages[product.id];
                   const displayImage = generatedImages[product.id] || (hasImage ? product.image : PLACEHOLDER_IMAGE);
-                  // Show generation UI if: No initial image, not generated yet, OR loading failed.
-                  const showGenerateOverlay = (!product.image || product.image === '') && !generatedImages[product.id] || failedImages[product.id];
+                  const isMissingImage = !hasImage && !generatedImages[product.id];
+                  const isGenerated = !!generatedImages[product.id];
 
                   return (
-                  <div key={product.id} className="group relative bg-[#0F1216] rounded-2xl border border-white/10 overflow-hidden transition-all duration-500 hover:scale-[1.02] hover:shadow-[0_0_30px_rgba(45,137,229,0.25)] hover:border-accent/50 hover:z-10 flex flex-col h-full">
+                  <div key={product.id} className="group relative flex flex-col bg-[#1A1E24] rounded-3xl border border-white/5 overflow-hidden transition-all duration-300 hover:shadow-[0_8px_30px_rgba(45,137,229,0.15)] hover:border-accent/40 hover:-translate-y-1">
                     
                     {/* Image Area */}
-                    <div className="relative h-60 overflow-hidden bg-[#1A1E24] group-hover:bg-[#1f242b] transition-colors">
+                    <div className="relative aspect-square overflow-hidden bg-[#121418]">
                         
-                        {!loadedImages[product.id] && !generatedImages[product.id] && !failedImages[product.id] && !showGenerateOverlay && (
-                            <div className="absolute inset-0 bg-white/5 animate-pulse z-10 flex items-center justify-center">
+                        {/* Loading Spinner */}
+                        {!loadedImages[product.id] && !generatedImages[product.id] && hasImage && (
+                            <div className="absolute inset-0 flex items-center justify-center bg-[#121418] z-10">
                                 <RefreshCw size={24} className="text-white/20 animate-spin" />
                             </div>
                         )}
+
+                        {/* Main Image */}
+                        <img 
+                            src={displayImage} 
+                            alt={product.name}
+                            onLoad={() => handleImageLoad(product.id)}
+                            onError={(e) => {
+                                if (!failedImages[product.id] && !generatedImages[product.id]) {
+                                    setFailedImages(prev => ({...prev, [product.id]: true}));
+                                }
+                            }}
+                            className={`w-full h-full object-cover transition-transform duration-700 ease-out group-hover:scale-110 
+                                ${loadedImages[product.id] || generatedImages[product.id] || !hasImage ? 'opacity-100' : 'opacity-0'}
+                            `}
+                        />
                         
-                        {!showGenerateOverlay && (
-                            <img 
-                                src={displayImage} 
-                                alt={product.name} 
-                                onLoad={() => handleImageLoad(product.id)}
-                                onError={(e) => {
-                                    if (!failedImages[product.id] && !generatedImages[product.id]) {
-                                        setFailedImages(prev => ({...prev, [product.id]: true}));
-                                    }
-                                }}
-                                className={`relative z-10 w-full h-full object-cover transition-transform duration-700 ease-out group-hover:scale-110 opacity-90 group-hover:opacity-100 
-                                    ${loadedImages[product.id] || generatedImages[product.id] ? 'opacity-100' : 'opacity-0'}
-                                `}
-                            />
+                        {/* Gradient Overlay for bottom text visibility (if needed) and depth */}
+                        <div className="absolute inset-0 bg-gradient-to-t from-[#1A1E24] via-transparent to-transparent opacity-20 z-10"></div>
+
+                        {/* Category Badge */}
+                        <div className="absolute top-4 left-4 z-20">
+                            <span className={`px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider rounded-xl backdrop-blur-md border shadow-lg flex items-center gap-1.5
+                                ${product.category === 'kit' ? 'bg-purple-500/10 text-purple-300 border-purple-500/20' : 
+                                  product.category === 'sensor' ? 'bg-cyan-500/10 text-cyan-300 border-cyan-500/20' : 
+                                  'bg-orange-500/10 text-orange-300 border-orange-500/20'}
+                            `}>
+                                {product.category === 'kit' ? <Cpu size={12} /> : product.category === 'sensor' ? <Zap size={12} /> : <Settings size={12} />}
+                                {product.category === 'kit' ? 'Kit' : product.category === 'sensor' ? 'Sensor' : 'Part'}
+                            </span>
+                        </div>
+                        
+                        {/* AI Generated Badge */}
+                        {isGenerated && (
+                            <div className="absolute top-4 right-4 z-20" title="Generated by AI">
+                                <div className="bg-black/60 backdrop-blur-md p-1.5 rounded-lg border border-white/10 text-purple-400 shadow-lg">
+                                    <Sparkles size={12} />
+                                </div>
+                            </div>
                         )}
 
-                        {/* Gradient Overlay for Text Readability */}
-                        <div className="absolute inset-0 bg-gradient-to-t from-[#0F1216] via-[#0F1216]/20 to-transparent opacity-80 z-20 pointer-events-none" />
-                        
-                        {/* Technical Corners */}
-                        <div className="absolute top-3 left-3 w-4 h-4 border-t border-l border-white/30 z-20 opacity-50 group-hover:opacity-100 transition-opacity"></div>
-                        <div className="absolute top-3 right-3 w-4 h-4 border-t border-r border-white/30 z-20 opacity-50 group-hover:opacity-100 transition-opacity"></div>
-
-                        {/* Magic Wand Button (AI Generate) - Always accessible on hover for regeneration */}
-                        <div className="absolute top-3 right-3 z-30 opacity-0 group-hover:opacity-100 transition-all duration-300">
+                        {/* Floating Action Buttons */}
+                        <div className="absolute bottom-4 right-4 flex gap-2 translate-y-10 opacity-0 group-hover:translate-y-0 group-hover:opacity-100 transition-all duration-300 z-20">
                             <button 
                                 onClick={(e) => handleGenerateImage(e, product)}
                                 disabled={generatingIds[product.id]}
-                                className="w-8 h-8 flex items-center justify-center bg-black/60 hover:bg-accent backdrop-blur-md rounded-lg text-white border border-white/10 hover:border-accent transition shadow-lg disabled:opacity-50"
+                                className="w-10 h-10 flex items-center justify-center bg-black/60 hover:bg-accent backdrop-blur-md rounded-full text-white border border-white/10 hover:border-accent transition-all shadow-lg disabled:opacity-50"
                                 title="توليد صورة بالذكاء الاصطناعي"
                             >
-                                {generatingIds[product.id] ? <RefreshCw className="animate-spin" size={14} /> : <Wand2 size={14} />}
+                                {generatingIds[product.id] ? <RefreshCw className="animate-spin" size={16} /> : <Wand2 size={16} />}
+                            </button>
+                            
+                            <button 
+                                onClick={(e) => { e.preventDefault(); setQuickViewProduct(product); }}
+                                className="w-10 h-10 flex items-center justify-center bg-black/60 hover:bg-white hover:text-black backdrop-blur-md rounded-full text-white border border-white/10 transition-all shadow-lg"
+                                title="نظرة سريعة"
+                            >
+                                <Eye size={16} />
                             </button>
                         </div>
 
-                        {/* Generation Overlay (For missing/failed images) */}
-                        {showGenerateOverlay && (
-                           <div className="absolute inset-0 bg-gradient-to-br from-[#1A1E24] to-black flex flex-col items-center justify-center z-30 p-4 text-center animate-in fade-in">
-                               <div className="w-12 h-12 bg-white/5 rounded-full flex items-center justify-center mb-3 border border-white/5">
-                                  <ImageOff className="text-gray-500" size={20} />
+                        {/* Missing Image State - Modern Blueprint Placeholder */}
+                        {isMissingImage && (
+                            <div className="absolute inset-0 flex flex-col items-center justify-center z-10 bg-[#0F1216] p-6 text-center animate-in fade-in">
+                                <div className="absolute inset-0 opacity-10 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-white via-transparent to-transparent"></div>
+                                <div className="w-16 h-16 mb-4 rounded-full bg-white/5 border border-white/10 flex items-center justify-center group-hover:scale-110 transition-transform duration-500">
+                                    <ImageIcon size={32} className="text-gray-600" />
                                 </div>
-                               <p className="text-xs text-gray-400 mb-4 font-bold">الصورة غير متوفرة</p>
-                               <button 
-                                  onClick={(e) => handleGenerateImage(e, product)}
-                                  disabled={generatingIds[product.id]}
-                                  className="bg-accent hover:bg-accentHover text-white px-4 py-2.5 rounded-xl text-[10px] font-bold flex items-center gap-2 transition disabled:opacity-50 shadow-lg shadow-accent/10 border border-accent/20 hover:scale-105"
-                               >
-                                  {generatingIds[product.id] ? <RefreshCw className="animate-spin" size={14} /> : <Wand2 size={14} />}
-                                  توليد صورة
-                               </button>
-                           </div>
+                                <p className="text-xs text-gray-400 mb-4 font-medium max-w-[200px]">صورة المنتج غير متوفرة. يمكنك توليد صورة باستخدام الذكاء الاصطناعي.</p>
+                                <button 
+                                    onClick={(e) => handleGenerateImage(e, product)}
+                                    disabled={generatingIds[product.id]}
+                                    className="group/gen relative overflow-hidden bg-accent hover:bg-accentHover text-white px-5 py-2.5 rounded-xl text-xs font-bold flex items-center gap-2 transition disabled:opacity-50 shadow-lg shadow-accent/20 border border-accent/20"
+                                >
+                                    <div className="absolute inset-0 bg-white/20 translate-y-full group-hover/gen:translate-y-0 transition-transform duration-300"></div>
+                                    {generatingIds[product.id] ? <RefreshCw className="animate-spin" size={14} /> : <Wand2 size={14} />}
+                                    <span className="relative z-10">توليد صورة تلقائية</span>
+                                </button>
+                            </div>
                         )}
-
-                        {/* Floating Quick Actions (Slide up on hover) */}
-                        <div className="absolute inset-x-0 bottom-0 z-30 p-4 translate-y-full group-hover:translate-y-0 transition-transform duration-300 flex items-center justify-center gap-3">
-                             <button 
-                                onClick={(e) => {
-                                    e.preventDefault();
-                                    setQuickViewProduct(product);
-                                }}
-                                className="h-9 px-4 rounded-lg bg-black/80 backdrop-blur-md text-white border border-white/20 hover:bg-accent hover:border-accent transition-all flex items-center justify-center gap-2 text-xs font-bold shadow-xl hover:scale-105"
-                             >
-                                <Eye size={14} /> نظرة سريعة
-                             </button>
-                             <Link 
-                                to={`/store/product/${product.id}`}
-                                className="h-9 w-9 rounded-lg bg-black/80 backdrop-blur-md text-white border border-white/20 hover:bg-white hover:text-black hover:border-white transition-all flex items-center justify-center shadow-xl hover:scale-105"
-                                title="التفاصيل"
-                             >
-                                <ArrowRight size={14} />
-                             </Link>
-                        </div>
-
-                         {/* Badge Top Left */}
-                         <div className="absolute top-3 left-3 z-30">
-                            <span className={`text-[10px] font-bold uppercase tracking-wider flex items-center gap-1.5 px-2 py-1 rounded-md backdrop-blur-md border shadow-sm
-                                ${product.category === 'kit' ? 'bg-purple-500/20 text-purple-300 border-purple-500/30' : 
-                                  product.category === 'sensor' ? 'bg-cyan-500/20 text-cyan-300 border-cyan-500/30' : 
-                                  'bg-orange-500/20 text-orange-300 border-orange-500/30'}
-                             `}>
-                                {product.category === 'kit' ? 'KIT' : product.category === 'sensor' ? 'SENSOR' : 'PART'}
-                                {product.category === 'kit' ? <Cpu size={10} /> : product.category === 'sensor' ? <Zap size={10} /> : <Settings size={10} />}
-                             </span>
-                        </div>
                     </div>
 
-                    {/* Content Area */}
-                    <div className="p-5 flex flex-col flex-1 relative z-20 bg-[#0F1216]">
-                        
-                        <div className="mb-2 flex items-center gap-1">
-                             <div className="flex text-yellow-500 text-[10px]">
-                                <Star size={10} fill="currentColor" />
-                                <Star size={10} fill="currentColor" />
-                                <Star size={10} fill="currentColor" />
-                                <Star size={10} fill="currentColor" />
-                                <Star size={10} className="text-gray-700" />
+                    {/* Content Body */}
+                    <div className="flex flex-col flex-1 p-5 relative z-10">
+                        <div className="flex justify-between items-start mb-2">
+                             <div className="flex items-center gap-1 bg-black/20 px-2 py-0.5 rounded-md border border-white/5">
+                                <Star size={10} className="text-yellow-500 fill-yellow-500" />
+                                <span className="text-[10px] font-bold text-gray-400 pt-0.5">4.8</span>
                              </div>
-                             <span className="text-[9px] text-gray-500 font-medium ml-1">(4.8)</span>
                         </div>
 
-                        <Link to={`/store/product/${product.id}`} className="block group-hover:text-accent transition-colors duration-300">
-                            <h3 className="text-base font-bold text-white mb-2 leading-tight min-h-[40px]">{product.name}</h3>
+                        <Link to={`/store/product/${product.id}`} className="group-hover:text-accent transition-colors duration-300 block mb-2">
+                            <h3 className="text-lg font-bold text-white leading-tight line-clamp-1">{product.name}</h3>
                         </Link>
 
-                        <p className="text-gray-500 text-xs leading-relaxed mb-4 line-clamp-2">
+                        <p className="text-xs text-gray-400 line-clamp-2 leading-relaxed mb-6 h-9">
                             {product.description}
                         </p>
-                        
-                        {/* Price & Action Row */}
-                        <div className="mt-auto pt-4 border-t border-white/5 flex items-center justify-between">
+
+                        {/* Footer Actions */}
+                        <div className="mt-auto flex items-center justify-between pt-4 border-t border-white/5">
                              <div className="flex flex-col">
-                                <div className="flex items-baseline gap-1">
-                                    <span className="text-lg font-bold text-white font-mono tracking-tight group-hover:text-highlight transition-colors">{product.price}</span>
-                                    <span className="text-[10px] text-gray-400 font-bold">ر.س</span>
-                                </div>
+                                 <span className="text-[10px] text-gray-500 font-bold uppercase tracking-wider mb-0.5 font-mono">Price</span>
+                                 <div className="flex items-baseline gap-1">
+                                     <span className="text-xl font-mono font-bold text-white tracking-tight">{product.price}</span>
+                                     <span className="text-[10px] text-accent font-bold">ر.س</span>
+                                 </div>
                              </div>
-                             
+
                              <button 
-                                onClick={(e) => {
-                                    e.preventDefault();
-                                    addToCart(product);
-                                }}
-                                className="w-9 h-9 rounded-lg bg-white/5 text-gray-300 hover:bg-accent hover:text-white transition-all flex items-center justify-center border border-white/10 hover:border-accent hover:scale-110 active:scale-95 group/btn"
+                                onClick={(e) => { e.preventDefault(); addToCart(product); }}
+                                className="px-4 py-2 rounded-xl bg-white/5 hover:bg-accent text-white border border-white/10 hover:border-accent transition-all flex items-center gap-2 group/btn active:scale-95"
                                 title="أضف للسلة"
                              >
-                                <Plus size={16} className="group-hover/btn:rotate-90 transition-transform duration-300" />
+                                <span className="text-xs font-bold">أضف للسلة</span>
+                                <Plus size={14} className="group-hover/btn:rotate-90 transition-transform duration-300" />
                              </button>
                         </div>
                     </div>
@@ -388,16 +404,22 @@ const Store: React.FC = () => {
                 )})}
               </div>
             ) : (
-              <div className="flex flex-col items-center justify-center py-20 bg-secondary/30 border border-white/5 rounded-2xl text-center border-dashed">
-                 <div className="w-16 h-16 bg-white/5 rounded-full flex items-center justify-center mb-6 text-gray-500 animate-pulse">
-                    <Package size={32} />
+              <div className="col-span-full flex flex-col items-center justify-center py-24 bg-secondary/20 border border-white/5 rounded-3xl text-center border-dashed group animate-in fade-in duration-500">
+                 <div className="w-20 h-20 bg-white/5 rounded-full flex items-center justify-center mb-6 text-gray-600 group-hover:scale-110 group-hover:text-accent transition-all duration-500">
+                    <SearchX size={40} strokeWidth={1.5} />
                  </div>
-                 <h3 className="text-xl font-bold text-white mb-2">لا توجد نتائج مطابقة</h3>
-                 <p className="text-gray-400 text-sm max-w-xs mx-auto mb-6 leading-relaxed">
-                   حاول البحث بكلمات مختلفة أو تغيير الفلاتر للحصول على نتائج أفضل.
+                 <h3 className="text-2xl font-bold text-white mb-3">لا توجد نتائج مطابقة</h3>
+                 <p className="text-gray-400 text-sm max-w-md mx-auto mb-8 leading-relaxed">
+                   {searchTerm 
+                     ? `لم يتم العثور على أي منتجات تطابق "${searchTerm}". حاول استخدام كلمات مختلفة.`
+                     : 'لا توجد منتجات توافق الفلاتر المختارة حالياً. حاول تخفيف قيود البحث.'}
                  </p>
-                 <button onClick={clearFilters} className="px-5 py-2 rounded-lg bg-primary hover:bg-white/5 text-white text-xs font-bold border border-white/10 transition-all hover:border-accent">
-                      مسح جميع الفلاتر
+                 <button 
+                    onClick={clearFilters} 
+                    className="px-8 py-3 rounded-xl bg-accent hover:bg-accentHover text-white font-bold shadow-lg shadow-accent/20 transition-all hover:scale-105 active:scale-95 flex items-center gap-2"
+                 >
+                      <RefreshCw size={18} />
+                      مسح الفلاتر وإظهار الكل
                  </button>
               </div>
             )}
@@ -410,7 +432,7 @@ const Store: React.FC = () => {
       {quickViewProduct && (
           <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/90 backdrop-blur-md animate-in fade-in duration-200" onClick={() => setQuickViewProduct(null)}>
               <div 
-                  className="bg-[#15191E] border border-white/10 rounded-2xl max-w-4xl w-full shadow-2xl relative flex flex-col md:flex-row overflow-hidden animate-in zoom-in-95 duration-200"
+                  className="bg-[#1A1E24] border border-white/10 rounded-2xl max-w-4xl w-full shadow-2xl relative flex flex-col md:flex-row overflow-hidden animate-in zoom-in-95 duration-200"
                   onClick={(e) => e.stopPropagation()}
               >
                   <button 
@@ -432,7 +454,7 @@ const Store: React.FC = () => {
                           }}
                           className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity duration-500"
                        />
-                       <div className="absolute inset-0 bg-gradient-to-t from-[#15191E] via-transparent to-transparent opacity-80"></div>
+                       <div className="absolute inset-0 bg-gradient-to-t from-[#121418] via-transparent to-transparent opacity-80"></div>
                        
                        {/* AI Regenerate in Modal */}
                        <div className="absolute top-4 left-4 z-30 opacity-0 group-hover:opacity-100 transition-all duration-300">
@@ -484,7 +506,7 @@ const Store: React.FC = () => {
                               to={`/store/product/${quickViewProduct.id}`}
                               className="px-5 py-3 rounded-lg border border-white/10 hover:bg-white/5 text-white transition flex items-center justify-center font-bold text-sm hover:border-white/30"
                           >
-                              التفاصيل
+                              <ArrowRight size={18} />
                           </Link>
                        </div>
                   </div>

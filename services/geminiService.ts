@@ -84,7 +84,12 @@ export const translateCommands = async (
     });
 
     if (response.text) {
-      return JSON.parse(response.text);
+      let cleanText = response.text.trim();
+      // Remove markdown code blocks if present
+      if (cleanText.startsWith('```')) {
+        cleanText = cleanText.replace(/^```(json)?|```$/g, '');
+      }
+      return JSON.parse(cleanText);
     }
     return [];
   } catch (error) {
