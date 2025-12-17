@@ -49,4 +49,12 @@ export const PRODUCTS: Product[] = [
     description: 'هيكل ميكانيكي لروبوت عنكبوتي، مقطوع بالليزر بدقة عالية، يشمل البراغي والمفاصل اللازمة للتجميع.', 
     image: 'https://images.unsplash.com/photo-1535378437327-10f76365c4df?auto=format&fit=crop&q=80&w=800' 
   },
+  {
+    id: '7',
+    name: 'وحدة تحكم مخصصة (Custom PCB)',
+    category: 'part',
+    price: 150,
+    description: 'لوحة تحكم إلكترونية مطبوعة مخصصة للمشاريع المتقدمة، تدعم واي-فاي وبلوتوث مدمج.',
+    image: '' 
+  },
 ];

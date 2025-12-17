@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Play, Pause, RotateCcw, Send, Terminal, Battery, Thermometer, Activity, Bot, Sparkles, FileCode, Loader2, Wrench, Cpu, Zap, ArrowUp, ArrowDown, ArrowLeft, ArrowRight, Package, X, Flag, Trophy, AlertTriangle, ChevronsRight, Plus, MessageSquare, HelpCircle, Trash2, Wand2, Copy, LayoutDashboard, MousePointer2, GripHorizontal } from 'lucide-react';
+import { Play, Pause, RotateCcw, Send, Terminal, Battery, Thermometer, Activity, Bot, Sparkles, FileCode, Loader2, Wrench, Cpu, Zap, ArrowUp, ArrowDown, ArrowLeft, ArrowRight, Package, X, Flag, Trophy, AlertTriangle, ChevronsRight, Plus, MessageSquare, HelpCircle, Trash2, Wand2, Copy, LayoutDashboard, MousePointer2, GripHorizontal, Save, Download } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { SimulationEngine } from '../services/simulationEngine';
 import { streamAssistantHelp, translateCommands } from '../services/geminiService';
@@ -80,6 +80,7 @@ const Simulator: React.FC = () => {
   const commandsQueueRef = useRef<string[]>([]);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const chatEndRef = useRef<HTMLDivElement>(null);
+  const isRestoringRef = useRef(false);
 
   // --- INITIALIZATION ---
   useEffect(() => {
@@ -89,6 +90,10 @@ const Simulator: React.FC = () => {
 
   useEffect(() => {
     if (!isRunning) {
+        if (isRestoringRef.current) {
+            isRestoringRef.current = false;
+            return;
+        }
         initEngine();
         setLogs(prev => [...prev, '> تم تحديث هيكل الروبوت.']);
     }
@@ -116,6 +121,72 @@ const Simulator: React.FC = () => {
     setRobotState({ x: 0, y: 0, direction: 90 });
     setPathHistory([{x: 0, y: 0}]);
     setCurrentAction(null);
+  };
+
+  // --- SAVE / LOAD STATE ---
+  const handleSaveState = () => {
+      const state = {
+          robotConfig,
+          robotState,
+          batteryLevel,
+          temperature,
+          code,
+          pathHistory,
+          timestamp: new Date().toISOString()
+      };
+      try {
+        localStorage.setItem('mulaqqen_simulator_state', JSON.stringify(state));
+        setLogs(prev => [...prev, '> تم حفظ حالة المحاكي بنجاح.']);
+      } catch (e) {
+        setLogs(prev => [...prev, '> فشل حفظ الحالة. قد تكون المساحة ممتلئة.']);
+      }
+  };
+
+  const handleLoadState = () => {
+      const saved = localStorage.getItem('mulaqqen_simulator_state');
+      if (!saved) {
+          setLogs(prev => [...prev, '> لا توجد حالة محفوظة مسبقاً.']);
+          return;
+      }
+      
+      try {
+          const parsed = JSON.parse(saved);
+          
+          if (!parsed.robotConfig || !parsed.robotState) throw new Error("Invalid state structure");
+
+          // Set restoring flag to prevent useEffect from resetting engine state
+          isRestoringRef.current = true;
+          
+          setRobotConfig(parsed.robotConfig);
+          setRobotState(parsed.robotState);
+          setBatteryLevel(parsed.batteryLevel);
+          setTemperature(parsed.temperature);
+          setCode(parsed.code);
+          setPathHistory(parsed.pathHistory || []);
+          
+          // Re-init engine manually with restored values
+          const initialGrid = Array(GRID_SIZE).fill(null).map(() => Array(GRID_SIZE).fill('empty'));
+          OBSTACLES.forEach(obs => {
+             if (obs.x < GRID_SIZE && obs.y < GRID_SIZE) initialGrid[obs.y][obs.x] = 'obstacle';
+          });
+          
+          engineRef.current = new SimulationEngine(
+              parsed.robotConfig,
+              initialGrid as any,
+              { 
+                  x: parsed.robotState.x, 
+                  y: parsed.robotState.y, 
+                  direction: parsed.robotState.direction, 
+                  battery: parsed.batteryLevel, 
+                  temperature: parsed.temperature 
+              }
+          );
+
+          setLogs(prev => [...prev, '> تم استعادة الحالة المحفوظة بنجاح.']);
+      } catch (err) {
+          setLogs(prev => [...prev, '> خطأ أثناء استعادة الحالة. الملف تالف.']);
+          console.error(err);
+      }
   };
 
   // --- EXECUTION LOGIC ---
@@ -795,6 +866,22 @@ const Simulator: React.FC = () => {
                               إيقاف مؤقت
                            </button>
                         )}
+
+                        <button 
+                            onClick={handleSaveState}
+                            className="px-4 py-3 bg-white/5 hover:bg-white/10 text-white rounded-xl border border-white/10 transition hover:border-white/30"
+                            title="حفظ الحالة"
+                        >
+                            <Save size={20} />
+                        </button>
+                        
+                        <button 
+                            onClick={handleLoadState}
+                            className="px-4 py-3 bg-white/5 hover:bg-white/10 text-white rounded-xl border border-white/10 transition hover:border-white/30"
+                            title="استعادة الحالة"
+                        >
+                            <Download size={20} />
+                        </button>
                         
                         <button 
                            onClick={handleReset}

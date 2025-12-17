@@ -41,7 +41,7 @@ const Store: React.FC = () => {
         const response = await ai.models.generateContent({
             model: 'gemini-2.5-flash-image',
             contents: {
-                parts: [{ text: `Professional product photography of ${product.name}, ${product.description}. High tech, clean, robotic component, studio lighting, isolated on dark grey background, photorealistic, 4k.` }]
+                parts: [{ text: `High quality, photorealistic product photography of ${product.name}, ${product.description}. Sleek, modern, robotic component, cinematic lighting, isolated on a dark technical background, 4k resolution.` }]
             },
             config: {
                 imageConfig: { aspectRatio: "1:1" }
@@ -54,7 +54,8 @@ const Store: React.FC = () => {
             for (const part of response.candidates[0].content.parts) {
                 if (part.inlineData) {
                     const base64String = part.inlineData.data;
-                    imageUrl = `data:image/png;base64,${base64String}`;
+                    const mimeType = part.inlineData.mimeType || 'image/png';
+                    imageUrl = `data:${mimeType};base64,${base64String}`;
                     break;
                 }
             }
@@ -239,48 +240,55 @@ const Store: React.FC = () => {
                 {filteredProducts.map((product) => {
                   const hasImage = (product.image && product.image.trim() !== '') && !failedImages[product.id];
                   const displayImage = generatedImages[product.id] || (hasImage ? product.image : PLACEHOLDER_IMAGE);
-                  const showGenerateButton = (!hasImage && !generatedImages[product.id]) || failedImages[product.id];
+                  // Show generation UI if: No initial image, not generated yet, OR loading failed.
+                  const showGenerateButton = (!product.image || product.image === '') && !generatedImages[product.id] || failedImages[product.id];
 
                   return (
-                  <div key={product.id} className="group relative bg-[#0F1216] rounded-2xl border border-white/10 overflow-hidden transition-all duration-500 hover:border-accent/40 hover:shadow-2xl hover:shadow-accent/5 flex flex-col h-full hover:-translate-y-1">
+                  <div key={product.id} className="group relative bg-[#0F1216] rounded-2xl border border-white/10 overflow-hidden transition-all duration-500 hover:scale-[1.02] hover:shadow-[0_0_30px_rgba(45,137,229,0.25)] hover:border-accent/50 flex flex-col h-full">
                     
                     {/* Image Area */}
                     <div className="relative h-60 overflow-hidden bg-[#1A1E24] group-hover:bg-[#1f242b] transition-colors">
                         
-                        {!loadedImages[product.id] && !generatedImages[product.id] && !failedImages[product.id] && (
+                        {!loadedImages[product.id] && !generatedImages[product.id] && !failedImages[product.id] && !showGenerateButton && (
                             <div className="absolute inset-0 bg-white/5 animate-pulse z-10 flex items-center justify-center">
-                                <ImageOff size={24} className="text-white/20" />
+                                <RefreshCw size={24} className="text-white/20 animate-spin" />
                             </div>
                         )}
-                        <img 
-                            src={displayImage} 
-                            alt={product.name} 
-                            onLoad={() => handleImageLoad(product.id)}
-                            onError={(e) => {
-                                if (!failedImages[product.id] && !generatedImages[product.id]) {
-                                    setFailedImages(prev => ({...prev, [product.id]: true}));
-                                }
-                            }}
-                            className={`relative z-10 w-full h-full object-cover transition-transform duration-700 ease-out group-hover:scale-110 opacity-90 group-hover:opacity-100 
-                                ${loadedImages[product.id] || generatedImages[product.id] ? 'opacity-100' : 'opacity-0'}
-                            `}
-                        />
+                        
+                        {!showGenerateButton && (
+                            <img 
+                                src={displayImage} 
+                                alt={product.name} 
+                                onLoad={() => handleImageLoad(product.id)}
+                                onError={(e) => {
+                                    if (!failedImages[product.id] && !generatedImages[product.id]) {
+                                        setFailedImages(prev => ({...prev, [product.id]: true}));
+                                    }
+                                }}
+                                className={`relative z-10 w-full h-full object-cover transition-transform duration-700 ease-out group-hover:scale-110 opacity-90 group-hover:opacity-100 
+                                    ${loadedImages[product.id] || generatedImages[product.id] ? 'opacity-100' : 'opacity-0'}
+                                `}
+                            />
+                        )}
+
                         {/* Gradient Overlay for Text Readability */}
-                        <div className="absolute inset-0 bg-gradient-to-t from-[#0F1216] via-[#0F1216]/20 to-transparent opacity-80 z-20" />
+                        <div className="absolute inset-0 bg-gradient-to-t from-[#0F1216] via-[#0F1216]/20 to-transparent opacity-80 z-20 pointer-events-none" />
                         
                         {/* Technical Corners */}
-                        <div className="absolute top-3 left-3 w-4 h-4 border-t border-l border-white/30 z-20"></div>
-                        <div className="absolute top-3 right-3 w-4 h-4 border-t border-r border-white/30 z-20"></div>
+                        <div className="absolute top-3 left-3 w-4 h-4 border-t border-l border-white/30 z-20 opacity-50 group-hover:opacity-100 transition-opacity"></div>
+                        <div className="absolute top-3 right-3 w-4 h-4 border-t border-r border-white/30 z-20 opacity-50 group-hover:opacity-100 transition-opacity"></div>
 
                         {/* Generation Overlay */}
                         {showGenerateButton && (
-                           <div className="absolute inset-0 bg-black/60 flex flex-col items-center justify-center z-30 backdrop-blur-sm p-4 text-center animate-in fade-in">
-                               <ImageOff className="text-gray-500 mb-2" size={24} />
-                               <p className="text-xs text-gray-400 mb-3">الصورة غير متوفرة</p>
+                           <div className="absolute inset-0 bg-gradient-to-br from-[#1A1E24] to-black flex flex-col items-center justify-center z-30 p-4 text-center animate-in fade-in">
+                               <div className="w-12 h-12 bg-white/5 rounded-full flex items-center justify-center mb-3 border border-white/5">
+                                  <ImageOff className="text-gray-500" size={20} />
+                               </div>
+                               <p className="text-xs text-gray-400 mb-4 font-bold">الصورة غير متوفرة</p>
                                <button 
                                   onClick={(e) => handleGenerateImage(e, product)}
                                   disabled={generatingIds[product.id]}
-                                  className="bg-accent hover:bg-accentHover text-white px-4 py-2 rounded-lg text-xs font-bold flex items-center gap-2 transition disabled:opacity-50 shadow-lg"
+                                  className="bg-accent hover:bg-accentHover text-white px-4 py-2.5 rounded-xl text-[10px] font-bold flex items-center gap-2 transition disabled:opacity-50 shadow-lg shadow-accent/10 border border-accent/20 hover:scale-105"
                                >
                                   {generatingIds[product.id] ? <RefreshCw className="animate-spin" size={14} /> : <Wand2 size={14} />}
                                   توليد صورة بالذكاء الاصطناعي
@@ -295,16 +303,16 @@ const Store: React.FC = () => {
                                     e.preventDefault();
                                     setQuickViewProduct(product);
                                 }}
-                                className="h-10 px-4 rounded-lg bg-black/70 backdrop-blur-md text-white border border-white/20 hover:bg-accent hover:border-accent transition-all flex items-center justify-center gap-2 text-xs font-bold shadow-xl hover:scale-105"
+                                className="h-9 px-4 rounded-lg bg-black/80 backdrop-blur-md text-white border border-white/20 hover:bg-accent hover:border-accent transition-all flex items-center justify-center gap-2 text-xs font-bold shadow-xl hover:scale-105"
                              >
-                                <Eye size={16} /> نظرة سريعة
+                                <Eye size={14} /> نظرة سريعة
                              </button>
                              <Link 
                                 to={`/store/product/${product.id}`}
-                                className="h-10 w-10 rounded-lg bg-black/70 backdrop-blur-md text-white border border-white/20 hover:bg-white hover:text-black hover:border-white transition-all flex items-center justify-center shadow-xl hover:scale-105"
+                                className="h-9 w-9 rounded-lg bg-black/80 backdrop-blur-md text-white border border-white/20 hover:bg-white hover:text-black hover:border-white transition-all flex items-center justify-center shadow-xl hover:scale-105"
                                 title="التفاصيل"
                              >
-                                <ArrowRight size={16} />
+                                <ArrowRight size={14} />
                              </Link>
                         </div>
 
@@ -316,7 +324,7 @@ const Store: React.FC = () => {
                                   'bg-orange-500/20 text-orange-300 border-orange-500/30'}
                              `}>
                                 {product.category === 'kit' ? 'KIT' : product.category === 'sensor' ? 'SENSOR' : 'PART'}
-                                {product.category === 'kit' ? <Cpu size={12} /> : product.category === 'sensor' ? <Zap size={12} /> : <Settings size={12} />}
+                                {product.category === 'kit' ? <Cpu size={10} /> : product.category === 'sensor' ? <Zap size={10} /> : <Settings size={10} />}
                              </span>
                         </div>
                     </div>
@@ -324,15 +332,15 @@ const Store: React.FC = () => {
                     {/* Content Area */}
                     <div className="p-5 flex flex-col flex-1 relative z-20 bg-[#0F1216]">
                         
-                        <div className="mb-1 flex items-center gap-1">
-                             <div className="flex text-yellow-500">
-                                <Star size={12} fill="currentColor" />
-                                <Star size={12} fill="currentColor" />
-                                <Star size={12} fill="currentColor" />
-                                <Star size={12} fill="currentColor" />
-                                <Star size={12} className="text-gray-700" />
+                        <div className="mb-2 flex items-center gap-1">
+                             <div className="flex text-yellow-500 text-[10px]">
+                                <Star size={10} fill="currentColor" />
+                                <Star size={10} fill="currentColor" />
+                                <Star size={10} fill="currentColor" />
+                                <Star size={10} fill="currentColor" />
+                                <Star size={10} className="text-gray-700" />
                              </div>
-                             <span className="text-[10px] text-gray-500 font-medium ml-1">(4.8)</span>
+                             <span className="text-[9px] text-gray-500 font-medium ml-1">(4.8)</span>
                         </div>
 
                         <Link to={`/store/product/${product.id}`} className="block group-hover:text-accent transition-colors duration-300">
@@ -348,7 +356,7 @@ const Store: React.FC = () => {
                              <div className="flex flex-col">
                                 <div className="flex items-baseline gap-1">
                                     <span className="text-lg font-bold text-white font-mono tracking-tight group-hover:text-highlight transition-colors">{product.price}</span>
-                                    <span className="text--[10px] text-gray-400 font-bold">ر.س</span>
+                                    <span className="text-[10px] text-gray-400 font-bold">ر.س</span>
                                 </div>
                              </div>
                              
@@ -357,10 +365,10 @@ const Store: React.FC = () => {
                                     e.preventDefault();
                                     addToCart(product);
                                 }}
-                                className="w-10 h-10 rounded-full bg-white/5 text-white hover:bg-accent hover:text-white transition-all flex items-center justify-center border border-white/10 hover:border-accent hover:scale-110 active:scale-95 group/btn"
+                                className="w-9 h-9 rounded-lg bg-white/5 text-gray-300 hover:bg-accent hover:text-white transition-all flex items-center justify-center border border-white/10 hover:border-accent hover:scale-110 active:scale-95 group/btn"
                                 title="أضف للسلة"
                              >
-                                <Plus size={18} className="group-hover/btn:rotate-90 transition-transform duration-300" />
+                                <Plus size={16} className="group-hover/btn:rotate-90 transition-transform duration-300" />
                              </button>
                         </div>
                     </div>
