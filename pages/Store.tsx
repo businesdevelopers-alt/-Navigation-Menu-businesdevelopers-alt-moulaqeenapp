@@ -37,11 +37,11 @@ const Store: React.FC = () => {
     setGeneratingIds(prev => ({...prev, [product.id]: true}));
     
     try {
-        const ai = new GoogleGenAI({ apiKey: process.env.API_KEY || '' });
+        const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
         const response = await ai.models.generateContent({
             model: 'gemini-2.5-flash-image',
             contents: {
-                parts: [{ text: `High quality, photorealistic product photography of ${product.name}, ${product.description}. Sleek, modern, robotic component, cinematic lighting, isolated on a dark technical background, 4k resolution.` }]
+                parts: [{ text: `Professional product photography of ${product.name}, ${product.description}. High tech, futuristic robotic component, cinematic lighting, 8k resolution, highly detailed, photorealistic, isolated on a sleek dark technical background.` }]
             },
             config: {
                 imageConfig: { aspectRatio: "1:1" }
@@ -241,21 +241,21 @@ const Store: React.FC = () => {
                   const hasImage = (product.image && product.image.trim() !== '') && !failedImages[product.id];
                   const displayImage = generatedImages[product.id] || (hasImage ? product.image : PLACEHOLDER_IMAGE);
                   // Show generation UI if: No initial image, not generated yet, OR loading failed.
-                  const showGenerateButton = (!product.image || product.image === '') && !generatedImages[product.id] || failedImages[product.id];
+                  const showGenerateOverlay = (!product.image || product.image === '') && !generatedImages[product.id] || failedImages[product.id];
 
                   return (
-                  <div key={product.id} className="group relative bg-[#0F1216] rounded-2xl border border-white/10 overflow-hidden transition-all duration-500 hover:scale-[1.02] hover:shadow-[0_0_30px_rgba(45,137,229,0.25)] hover:border-accent/50 flex flex-col h-full">
+                  <div key={product.id} className="group relative bg-[#0F1216] rounded-2xl border border-white/10 overflow-hidden transition-all duration-500 hover:scale-[1.02] hover:shadow-[0_0_30px_rgba(45,137,229,0.25)] hover:border-accent/50 hover:z-10 flex flex-col h-full">
                     
                     {/* Image Area */}
                     <div className="relative h-60 overflow-hidden bg-[#1A1E24] group-hover:bg-[#1f242b] transition-colors">
                         
-                        {!loadedImages[product.id] && !generatedImages[product.id] && !failedImages[product.id] && !showGenerateButton && (
+                        {!loadedImages[product.id] && !generatedImages[product.id] && !failedImages[product.id] && !showGenerateOverlay && (
                             <div className="absolute inset-0 bg-white/5 animate-pulse z-10 flex items-center justify-center">
                                 <RefreshCw size={24} className="text-white/20 animate-spin" />
                             </div>
                         )}
                         
-                        {!showGenerateButton && (
+                        {!showGenerateOverlay && (
                             <img 
                                 src={displayImage} 
                                 alt={product.name} 
@@ -278,12 +278,24 @@ const Store: React.FC = () => {
                         <div className="absolute top-3 left-3 w-4 h-4 border-t border-l border-white/30 z-20 opacity-50 group-hover:opacity-100 transition-opacity"></div>
                         <div className="absolute top-3 right-3 w-4 h-4 border-t border-r border-white/30 z-20 opacity-50 group-hover:opacity-100 transition-opacity"></div>
 
-                        {/* Generation Overlay */}
-                        {showGenerateButton && (
+                        {/* Magic Wand Button (AI Generate) - Always accessible on hover for regeneration */}
+                        <div className="absolute top-3 right-3 z-30 opacity-0 group-hover:opacity-100 transition-all duration-300">
+                            <button 
+                                onClick={(e) => handleGenerateImage(e, product)}
+                                disabled={generatingIds[product.id]}
+                                className="w-8 h-8 flex items-center justify-center bg-black/60 hover:bg-accent backdrop-blur-md rounded-lg text-white border border-white/10 hover:border-accent transition shadow-lg disabled:opacity-50"
+                                title="توليد صورة بالذكاء الاصطناعي"
+                            >
+                                {generatingIds[product.id] ? <RefreshCw className="animate-spin" size={14} /> : <Wand2 size={14} />}
+                            </button>
+                        </div>
+
+                        {/* Generation Overlay (For missing/failed images) */}
+                        {showGenerateOverlay && (
                            <div className="absolute inset-0 bg-gradient-to-br from-[#1A1E24] to-black flex flex-col items-center justify-center z-30 p-4 text-center animate-in fade-in">
                                <div className="w-12 h-12 bg-white/5 rounded-full flex items-center justify-center mb-3 border border-white/5">
                                   <ImageOff className="text-gray-500" size={20} />
-                               </div>
+                                </div>
                                <p className="text-xs text-gray-400 mb-4 font-bold">الصورة غير متوفرة</p>
                                <button 
                                   onClick={(e) => handleGenerateImage(e, product)}
@@ -291,7 +303,7 @@ const Store: React.FC = () => {
                                   className="bg-accent hover:bg-accentHover text-white px-4 py-2.5 rounded-xl text-[10px] font-bold flex items-center gap-2 transition disabled:opacity-50 shadow-lg shadow-accent/10 border border-accent/20 hover:scale-105"
                                >
                                   {generatingIds[product.id] ? <RefreshCw className="animate-spin" size={14} /> : <Wand2 size={14} />}
-                                  توليد صورة بالذكاء الاصطناعي
+                                  توليد صورة
                                </button>
                            </div>
                         )}
@@ -316,7 +328,7 @@ const Store: React.FC = () => {
                              </Link>
                         </div>
 
-                         {/* Badge Top Right */}
+                         {/* Badge Top Left */}
                          <div className="absolute top-3 left-3 z-30">
                             <span className={`text-[10px] font-bold uppercase tracking-wider flex items-center gap-1.5 px-2 py-1 rounded-md backdrop-blur-md border shadow-sm
                                 ${product.category === 'kit' ? 'bg-purple-500/20 text-purple-300 border-purple-500/30' : 
@@ -421,6 +433,18 @@ const Store: React.FC = () => {
                           className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity duration-500"
                        />
                        <div className="absolute inset-0 bg-gradient-to-t from-[#15191E] via-transparent to-transparent opacity-80"></div>
+                       
+                       {/* AI Regenerate in Modal */}
+                       <div className="absolute top-4 left-4 z-30 opacity-0 group-hover:opacity-100 transition-all duration-300">
+                            <button 
+                                onClick={(e) => handleGenerateImage(e, quickViewProduct)}
+                                disabled={generatingIds[quickViewProduct.id]}
+                                className="p-2 bg-black/60 hover:bg-accent backdrop-blur-md rounded-lg text-white border border-white/10 hover:border-accent transition shadow-lg disabled:opacity-50"
+                                title="توليد صورة جديدة"
+                            >
+                                {generatingIds[quickViewProduct.id] ? <RefreshCw className="animate-spin" size={16} /> : <Wand2 size={16} />}
+                            </button>
+                        </div>
                   </div>
 
                   {/* Info Side */}

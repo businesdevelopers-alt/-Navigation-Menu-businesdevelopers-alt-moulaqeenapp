@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Play, Pause, RotateCcw, Send, Terminal, Battery, Thermometer, Activity, Bot, Sparkles, FileCode, Loader2, Wrench, Cpu, Zap, ArrowUp, ArrowDown, ArrowLeft, ArrowRight, Package, X, Flag, Trophy, AlertTriangle, ChevronsRight, Plus, MessageSquare, HelpCircle, Trash2, Wand2, Copy, LayoutDashboard, MousePointer2, GripHorizontal, Save, Download } from 'lucide-react';
+import { Play, Pause, RotateCcw, Send, Terminal, Battery, Thermometer, Activity, Bot, Sparkles, FileCode, Loader2, Wrench, Cpu, Zap, ArrowUp, ArrowDown, ArrowLeft, ArrowRight, Package, X, Flag, Trophy, AlertTriangle, ChevronsRight, Plus, MessageSquare, HelpCircle, Trash2, Wand2, Copy, LayoutDashboard, MousePointer2, GripHorizontal, Save, Download, Filter, Info, AlertOctagon } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { SimulationEngine } from '../services/simulationEngine';
 import { streamAssistantHelp, translateCommands } from '../services/geminiService';
@@ -46,6 +46,12 @@ const INITIAL_ROBOT_CONFIG: RobotSchema = {
   }
 };
 
+interface ConfigIssue {
+    location: string;
+    severity: 'critical' | 'warning' | 'info';
+    message: string;
+}
+
 const Simulator: React.FC = () => {
   // --- STATE ---
   const [code, setCode] = useState(DEFAULT_CODE);
@@ -69,10 +75,12 @@ const Simulator: React.FC = () => {
   const [aiPrompt, setAiPrompt] = useState('');
   const [isAiGenerating, setIsAiGenerating] = useState(false);
   const [showAiInput, setShowAiInput] = useState(false);
+  const [partsFilter, setPartsFilter] = useState<'all' | 'motor' | 'sensor'>('all');
 
   // Robot Config
   const [robotConfig, setRobotConfig] = useState<RobotSchema>(INITIAL_ROBOT_CONFIG);
   const [draggedItem, setDraggedItem] = useState<ComponentSchema | null>(null);
+  const [configIssues, setConfigIssues] = useState<ConfigIssue[]>([]);
 
   // Refs
   const engineRef = useRef<SimulationEngine | null>(null);
@@ -97,6 +105,7 @@ const Simulator: React.FC = () => {
         initEngine();
         setLogs(prev => [...prev, '> تم تحديث هيكل الروبوت.']);
     }
+    analyzeConfig();
   }, [robotConfig]);
 
   // Auto-scroll chat
@@ -122,6 +131,37 @@ const Simulator: React.FC = () => {
     setPathHistory([{x: 0, y: 0}]);
     setCurrentAction(null);
   };
+
+  const analyzeConfig = () => {
+      const issues: ConfigIssue[] = [];
+      const { slots } = robotConfig;
+
+      // Power Analysis
+      const totalPower = [slots.front, slots.back, slots.left, slots.right].reduce((acc, c) => acc + (c?.powerConsumption || 0), 0) + 0.5;
+      if (totalPower > 8) {
+          issues.push({ location: 'center', severity: 'critical', message: 'System Overload! High Power Consumption.' });
+      } else if (totalPower > 6) {
+          issues.push({ location: 'center', severity: 'warning', message: 'Power consumption is high.' });
+      } else {
+          issues.push({ location: 'center', severity: 'info', message: 'Power levels nominal.' });
+      }
+
+      // Motor Analysis
+      if (!slots.left && !slots.right) {
+          // General critical if both missing
+      } 
+      if (!slots.left) issues.push({ location: 'left', severity: 'critical', message: 'Missing Left Motor. Cannot turn or move properly.' });
+      if (!slots.right) issues.push({ location: 'right', severity: 'critical', message: 'Missing Right Motor. Cannot turn or move properly.' });
+
+      // Sensor Analysis
+      if (!slots.front) {
+          issues.push({ location: 'front', severity: 'warning', message: 'No front sensor. High risk of collision.' });
+      }
+
+      setConfigIssues(issues);
+  };
+
+  const getIssueForLocation = (loc: string) => configIssues.find(i => i.location === loc);
 
   // --- SAVE / LOAD STATE ---
   const handleSaveState = () => {
@@ -337,11 +377,20 @@ const Simulator: React.FC = () => {
       const commands = await translateCommands(promptToUse, simulationContext);
       
       if (commands && commands.length > 0) {
-        const codeBlock = commands.join('\n') + '\n';
-        insertCommand(`\n// AI: ${promptToUse}\n` + codeBlock);
-        setLogs(prev => [...prev, `> AI generated ${commands.length} commands successfully.`]);
-        setAiPrompt('');
-        setShowAiInput(false);
+        if (isRunning && !isPaused) {
+             // LIVE MODE: Inject into queue
+             commandsQueueRef.current = [...commandsQueueRef.current, ...commands];
+             setLogs(prev => [...prev, `> 🤖 AI Injected: ${commands.join(', ')}`]);
+             setAiPrompt('');
+             // Keep input open for more commands
+        } else {
+             // EDITOR MODE: Append to code
+             const codeBlock = commands.join('\n') + '\n';
+             insertCommand(`\n// AI: ${promptToUse}\n` + codeBlock);
+             setLogs(prev => [...prev, `> AI generated ${commands.length} commands successfully.`]);
+             setAiPrompt('');
+             setShowAiInput(false);
+        }
       } else {
         setLogs(prev => [...prev, '> AI could not interpret the request.']);
       }
@@ -451,6 +500,33 @@ const Simulator: React.FC = () => {
   };
 
   // --- RENDERING ---
+  const renderIssueMarker = (issue: ConfigIssue) => {
+    if (!issue) return null;
+    
+    const colorClass = issue.severity === 'critical' ? 'bg-red-500' : issue.severity === 'warning' ? 'bg-yellow-500' : 'bg-blue-500';
+    const shadowClass = issue.severity === 'critical' ? 'shadow-red-500/50' : issue.severity === 'warning' ? 'shadow-yellow-500/50' : 'shadow-blue-500/50';
+    
+    return (
+      <div className="absolute -top-3 -right-3 z-50 cursor-help group/marker">
+        <div className={`relative flex h-4 w-4`}>
+          {(issue.severity === 'critical' || issue.severity === 'warning') && (
+            <span className={`animate-ping absolute inline-flex h-full w-full rounded-full ${colorClass} opacity-75`}></span>
+          )}
+          <span className={`relative inline-flex rounded-full h-4 w-4 ${colorClass} shadow-lg ${shadowClass} border border-white/20 items-center justify-center`}>
+             {issue.severity === 'critical' ? <X size={10} className="text-white" /> : issue.severity === 'warning' ? <AlertTriangle size={10} className="text-black" /> : <Info size={10} className="text-white" />}
+          </span>
+        </div>
+        
+        {/* Tooltip */}
+        <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-max max-w-[150px] px-3 py-2 bg-black/90 border border-white/10 text-white text-[10px] rounded-lg opacity-0 group-hover/marker:opacity-100 transition-opacity pointer-events-none z-50 shadow-xl backdrop-blur-sm">
+            <p className={`font-bold mb-0.5 uppercase ${issue.severity === 'critical' ? 'text-red-400' : issue.severity === 'warning' ? 'text-yellow-400' : 'text-blue-400'}`}>{issue.severity}</p>
+            {issue.message}
+            <div className="absolute bottom-[-4px] left-1/2 -translate-x-1/2 w-2 h-2 bg-black/90 border-r border-b border-white/10 rotate-45"></div>
+        </div>
+      </div>
+    );
+  };
+
   const renderGrid = () => {
     const cells = [];
     for (let y = 0; y < GRID_SIZE; y++) {
@@ -494,6 +570,7 @@ const Simulator: React.FC = () => {
 
   const renderDropZone = (slot: 'front' | 'back' | 'left' | 'right', label: string, icon: React.ReactNode) => {
     const component = robotConfig.slots[slot];
+    const issue = getIssueForLocation(slot);
     // Visual cue for drag target: if we are dragging something, highlight empty slots
     const isTarget = draggedItem && !component;
     
@@ -510,6 +587,8 @@ const Simulator: React.FC = () => {
                 }
             `}
         >
+            {issue && renderIssueMarker(issue)}
+
             <div className={`absolute -top-3 px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider backdrop-blur-sm shadow-sm z-30
                  ${component ? 'bg-accent text-white' : isTarget ? 'bg-green-600 text-white' : 'bg-black border border-white/10 text-gray-500'}
             `}>
@@ -808,14 +887,17 @@ const Simulator: React.FC = () => {
                         <div className="p-4 bg-purple-900/10 border-b border-purple-500/20 animate-in slide-in-from-top duration-200">
                              <div className="flex items-center gap-2 mb-2 text-xs font-bold text-purple-300">
                                 <Bot size={14} />
-                                <span>المولد الذكي (Context Aware)</span>
+                                <span>
+                                    {isRunning && !isPaused ? 'تحكم مباشر (Live Command Mode)' : 'المولد الذكي (Code Generator)'}
+                                </span>
+                                {isRunning && !isPaused && <span className="inline-block w-2 h-2 bg-red-500 rounded-full animate-pulse ml-2"></span>}
                              </div>
                              <form onSubmit={(e) => handleGenerateCode(e)} className="relative">
                                  <input 
                                     type="text" 
                                     value={aiPrompt}
                                     onChange={(e) => setAiPrompt(e.target.value)}
-                                    placeholder="مثال: وصلني للعلم وتجنب العقبات"
+                                    placeholder={isRunning && !isPaused ? "أمر مباشر: تحرك للأمام..." : "مثال: وصلني للعلم وتجنب العقبات"}
                                     className="w-full bg-black/50 border border-purple-500/30 rounded-lg py-3 pl-3 pr-24 text-sm text-white focus:border-purple-400 focus:outline-none shadow-inner"
                                     autoFocus
                                  />
@@ -825,7 +907,7 @@ const Simulator: React.FC = () => {
                                     className="absolute left-1 top-1.5 bottom-1.5 bg-purple-600 hover:bg-purple-500 text-white px-3 rounded-md transition disabled:opacity-50 flex items-center gap-1 text-xs font-bold"
                                  >
                                     {isAiGenerating ? <Loader2 size={12} className="animate-spin" /> : <Wand2 size={12} />}
-                                    توليد
+                                    {isRunning && !isPaused ? 'تنفيذ' : 'توليد'}
                                  </button>
                              </form>
                              <div className="flex flex-wrap gap-2 mt-2">
@@ -914,6 +996,8 @@ const Simulator: React.FC = () => {
 
                                 {/* Central Core */}
                                 <div className="w-32 h-32 bg-[#1A1E24] rounded-2xl border-2 border-white/20 flex flex-col items-center justify-center z-10 relative shadow-[0_0_50px_rgba(0,0,0,0.5)]">
+                                    {getIssueForLocation('center') && renderIssueMarker(getIssueForLocation('center')!)}
+                                    
                                     <Cpu size={40} className="text-white/80 mb-2" />
                                     <span className="text-[10px] text-gray-500 font-mono tracking-widest uppercase">Central Unit</span>
                                     <div className="absolute top-2 right-2 flex gap-1">
@@ -935,37 +1019,61 @@ const Simulator: React.FC = () => {
                             </div>
                         </div>
 
-                        {/* Inventory Drawer */}
-                        <div className="h-48 bg-[#15191E] border-t border-white/10 flex flex-col shadow-[0_-5px_20px_rgba(0,0,0,0.3)]">
+                        {/* Parts Box (Previously Inventory Drawer) */}
+                        <div className="h-56 bg-[#15191E] border-t border-white/10 flex flex-col shadow-[0_-5px_20px_rgba(0,0,0,0.3)]">
                              <div className="flex items-center justify-between p-3 border-b border-white/5 bg-secondary/80">
-                                <h4 className="text-xs font-bold text-gray-300 uppercase flex items-center gap-2">
-                                    <GripHorizontal size={14} className="text-gray-500" />
-                                    صندوق القطع
-                                </h4>
+                                <div className="flex items-center gap-4">
+                                    <h4 className="text-xs font-bold text-gray-300 uppercase flex items-center gap-2">
+                                        <GripHorizontal size={14} className="text-gray-500" />
+                                        صندوق القطع (Parts Box)
+                                    </h4>
+                                    <div className="flex gap-1">
+                                        <button 
+                                            onClick={() => setPartsFilter('all')}
+                                            className={`px-3 py-1 text-[10px] rounded-full border transition-all ${partsFilter === 'all' ? 'bg-accent text-white border-accent' : 'bg-transparent text-gray-500 border-white/10 hover:border-white/30 hover:text-gray-300'}`}
+                                        >الكل</button>
+                                        <button 
+                                            onClick={() => setPartsFilter('motor')}
+                                            className={`px-3 py-1 text-[10px] rounded-full border transition-all ${partsFilter === 'motor' ? 'bg-accent text-white border-accent' : 'bg-transparent text-gray-500 border-white/10 hover:border-white/30 hover:text-gray-300'}`}
+                                        >محركات</button>
+                                        <button 
+                                            onClick={() => setPartsFilter('sensor')}
+                                            className={`px-3 py-1 text-[10px] rounded-full border transition-all ${partsFilter === 'sensor' ? 'bg-accent text-white border-accent' : 'bg-transparent text-gray-500 border-white/10 hover:border-white/30 hover:text-gray-300'}`}
+                                        >حساسات</button>
+                                    </div>
+                                </div>
                                 <span className="text-[10px] text-gray-500 bg-black/40 px-2 py-1 rounded border border-white/5">
                                     Total Power: <span className="text-white font-bold">{[robotConfig.slots.front, robotConfig.slots.back, robotConfig.slots.left, robotConfig.slots.right].reduce((acc, slot) => acc + (slot?.powerConsumption || 0), 0) + 0.5} W</span>
                                 </span>
                              </div>
-                             <div className="flex gap-4 overflow-x-auto p-4 custom-scrollbar flex-1 items-center">
-                                {AVAILABLE_COMPONENTS.map(component => (
+                             <div className="flex gap-4 overflow-x-auto p-4 custom-scrollbar flex-1 items-center bg-[#0F1216]">
+                                {AVAILABLE_COMPONENTS
+                                    .filter(c => {
+                                        if (partsFilter === 'all') return true;
+                                        if (partsFilter === 'motor') return c.type.includes('motor');
+                                        if (partsFilter === 'sensor') return !c.type.includes('motor');
+                                        return true;
+                                    })
+                                    .map(component => (
                                     <div 
                                         key={component.id}
                                         draggable
                                         onDragStart={(e) => handleDragStart(e, component)}
                                         onDragEnd={handleDragEnd}
-                                        className="flex-shrink-0 w-28 h-28 bg-[#0F1216] border border-white/10 rounded-xl p-3 cursor-grab hover:border-accent hover:shadow-[0_0_15px_rgba(45,137,229,0.15)] transition-all active:cursor-grabbing flex flex-col items-center justify-center text-center group hover:-translate-y-1 relative overflow-hidden"
+                                        className="flex-shrink-0 w-32 h-32 bg-[#1A1E24] border border-white/10 rounded-xl p-3 cursor-grab hover:border-accent hover:shadow-[0_0_20px_rgba(45,137,229,0.2)] transition-all active:cursor-grabbing flex flex-col items-center justify-center text-center group hover:-translate-y-1 relative overflow-hidden active:scale-95"
                                     >
-                                        <div className="absolute top-0 right-0 p-1.5 opacity-50">
-                                           {component.type.includes('motor') && <Zap size={10} className="text-yellow-500" />}
+                                        <div className="absolute top-2 right-2 p-1 rounded-full bg-black/40 text-gray-500 text-[8px] font-bold border border-white/5">
+                                           {component.type.includes('motor') ? 'M' : 'S'}
                                         </div>
-                                        <div className="mb-2 text-gray-400 group-hover:text-white transition-colors bg-white/5 p-2.5 rounded-lg group-hover:bg-accent/20">
-                                            {component.type.includes('motor') ? <Zap size={20} /> : 
-                                             component.type.includes('camera') ? <Bot size={20} /> :
-                                             <Activity size={20} />}
+                                        <div className="mb-3 text-gray-400 group-hover:text-white transition-colors bg-black/30 p-3 rounded-full group-hover:bg-accent/20 border border-white/5 group-hover:border-accent/30">
+                                            {component.type.includes('motor') ? <Zap size={24} /> : 
+                                             component.type.includes('camera') ? <Bot size={24} /> :
+                                             <Activity size={24} />}
                                         </div>
-                                        <span className="text-[10px] font-bold text-gray-300 leading-tight mb-1">{component.name}</span>
-                                        <div className="mt-1 flex items-center gap-1 bg-white/5 px-1.5 py-0.5 rounded text-[9px]">
-                                            <span className="font-mono text-gray-500">{component.powerConsumption}W</span>
+                                        <span className="text-xs font-bold text-gray-200 leading-tight mb-2 group-hover:text-white">{component.name}</span>
+                                        <div className="flex items-center gap-1.5 bg-black/40 px-2 py-1 rounded text-[9px] border border-white/5">
+                                            <Zap size={10} className="text-yellow-500" />
+                                            <span className="font-mono text-gray-400">{component.powerConsumption}W</span>
                                         </div>
                                     </div>
                                 ))}

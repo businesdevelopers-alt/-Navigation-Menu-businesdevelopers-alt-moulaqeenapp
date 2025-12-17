@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Cpu, Battery, Weight, Move, ArrowRight, Zap, Target, PenTool, Layers, Filter, X, Maximize2, Share2, CheckCircle2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
@@ -118,6 +118,123 @@ const PROJECTS: RobotProject[] = [
 
 const CATEGORIES = ['الكل', 'صناعي', 'تعليمي', 'استكشاف', 'مراقبة', 'خدمي', 'بحري'];
 
+interface ProjectCardProps {
+  robot: RobotProject;
+  index: number;
+  onClick: (r: RobotProject) => void;
+}
+
+// Individual Project Card Component with Scroll Animation
+// Fix: Added React.FC type to handle 'key' prop correctly in JSX
+const ProjectCard: React.FC<ProjectCardProps> = ({ robot, index, onClick }) => {
+  const [isVisible, setIsVisible] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setIsVisible(true);
+          observer.disconnect();
+        }
+      },
+      { threshold: 0.1, rootMargin: '50px' }
+    );
+
+    if (ref.current) {
+      observer.observe(ref.current);
+    }
+
+    return () => observer.disconnect();
+  }, []);
+
+  return (
+    <div 
+      ref={ref}
+      className={`group relative bg-[#15191E] rounded-3xl border border-white/5 overflow-hidden hover:border-accent/40 transition-all duration-700 ease-out hover:-translate-y-2 hover:shadow-[0_20px_60px_-15px_rgba(0,0,0,0.5)] flex flex-col h-full
+        ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-20'}
+      `}
+      style={{ transitionDelay: `${(index % 3) * 150}ms` }}
+    >
+      {/* Image Section */}
+      <div className="relative h-64 overflow-hidden bg-black/50">
+        <div className="absolute inset-0 bg-gradient-to-t from-[#15191E] via-transparent to-transparent opacity-90 z-10"></div>
+        
+        {/* Floating Badge */}
+        <div className="absolute top-4 left-4 z-20">
+            <span className="px-3 py-1 bg-black/60 backdrop-blur-md text-white text-[10px] font-bold rounded-lg border border-white/10 shadow-lg uppercase tracking-wider flex items-center gap-1.5">
+                <Target size={12} className="text-accent" />
+                {robot.category}
+            </span>
+        </div>
+
+        <img 
+          src={robot.image} 
+          alt={robot.name} 
+          className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110 group-hover:rotate-1"
+        />
+
+        {/* Overlay Action */}
+        <div className="absolute inset-0 z-20 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 bg-black/20 backdrop-blur-[2px]">
+            <button 
+                onClick={() => onClick(robot)}
+                className="px-6 py-3 bg-accent text-white rounded-full font-bold text-sm shadow-xl transform translate-y-4 group-hover:translate-y-0 transition-all duration-300 flex items-center gap-2"
+            >
+                <Maximize2 size={16} />
+                عرض التفاصيل
+            </button>
+        </div>
+      </div>
+
+      {/* Content Section */}
+      <div className="p-6 pt-2 flex flex-col flex-1 relative z-20">
+         <div className="flex justify-between items-start mb-3">
+            <h3 className="text-2xl font-bold text-white group-hover:text-accent transition-colors">{robot.name}</h3>
+         </div>
+         
+         <p className="text-gray-400 text-xs mb-6 leading-relaxed line-clamp-2">
+            {robot.description}
+         </p>
+
+         {/* Mini Specs Row */}
+         <div className="flex items-center gap-4 mb-6 text-xs text-gray-500 bg-black/20 p-3 rounded-xl border border-white/5">
+            <div className="flex items-center gap-1.5" title="الوزن">
+                <Weight size={14} className="text-gray-400" />
+                <span className="font-mono">{robot.specs.weight}</span>
+            </div>
+            <div className="w-px h-3 bg-white/10"></div>
+            <div className="flex items-center gap-1.5" title="البطارية">
+                <Battery size={14} className="text-green-500" />
+                <span className="font-mono">{robot.specs.battery}</span>
+            </div>
+            <div className="w-px h-3 bg-white/10"></div>
+            <div className="flex items-center gap-1.5" title="السرعة">
+                <Move size={14} className="text-blue-500" />
+                <span className="font-mono">{robot.specs.speed}</span>
+            </div>
+         </div>
+
+         <div className="mt-auto pt-4 border-t border-white/5 flex items-center justify-between">
+            <div className="flex -space-x-2 space-x-reverse overflow-hidden">
+                {[1,2,3].map(i => (
+                    <div key={i} className="inline-block h-6 w-6 rounded-full ring-2 ring-[#15191E] bg-white/10 flex items-center justify-center text-[8px] font-bold text-gray-500">
+                        <Cpu size={10} />
+                    </div>
+                ))}
+            </div>
+            <button 
+                onClick={() => onClick(robot)}
+                className="text-xs font-bold text-white hover:text-accent transition flex items-center gap-1 group/link"
+            >
+                المزيد
+                <ArrowRight size={14} className="group-hover/link:-translate-x-1 transition-transform" />
+            </button>
+         </div>
+      </div>
+    </div>
+  );
+};
+
 const RobotsGallery: React.FC = () => {
   const [selectedCategory, setSelectedCategory] = useState('الكل');
   const [selectedProject, setSelectedProject] = useState<RobotProject | null>(null);
@@ -171,88 +288,7 @@ const RobotsGallery: React.FC = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
           {filteredProjects.map((robot, idx) => (
-            <div 
-              key={robot.id} 
-              className="group relative bg-[#15191E] rounded-3xl border border-white/5 overflow-hidden hover:border-accent/40 transition-all duration-500 hover:-translate-y-2 hover:shadow-[0_20px_60px_-15px_rgba(0,0,0,0.5)] animate-in fade-in zoom-in-95 flex flex-col h-full"
-              style={{ animationDelay: `${idx * 100}ms` }}
-            >
-              
-              {/* Image Section */}
-              <div className="relative h-64 overflow-hidden bg-black/50">
-                <div className="absolute inset-0 bg-gradient-to-t from-[#15191E] via-transparent to-transparent opacity-90 z-10"></div>
-                
-                {/* Floating Badge */}
-                <div className="absolute top-4 left-4 z-20">
-                    <span className="px-3 py-1 bg-black/60 backdrop-blur-md text-white text-[10px] font-bold rounded-lg border border-white/10 shadow-lg uppercase tracking-wider flex items-center gap-1.5">
-                        <Target size={12} className="text-accent" />
-                        {robot.category}
-                    </span>
-                </div>
-
-                <img 
-                  src={robot.image} 
-                  alt={robot.name} 
-                  className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110 group-hover:rotate-1"
-                />
-
-                {/* Overlay Action */}
-                <div className="absolute inset-0 z-20 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 bg-black/20 backdrop-blur-[2px]">
-                    <button 
-                        onClick={() => setSelectedProject(robot)}
-                        className="px-6 py-3 bg-accent text-white rounded-full font-bold text-sm shadow-xl transform translate-y-4 group-hover:translate-y-0 transition-all duration-300 flex items-center gap-2"
-                    >
-                        <Maximize2 size={16} />
-                        عرض التفاصيل
-                    </button>
-                </div>
-              </div>
-
-              {/* Content Section */}
-              <div className="p-6 pt-2 flex flex-col flex-1 relative z-20">
-                 <div className="flex justify-between items-start mb-3">
-                    <h3 className="text-2xl font-bold text-white group-hover:text-accent transition-colors">{robot.name}</h3>
-                 </div>
-                 
-                 <p className="text-gray-400 text-xs mb-6 leading-relaxed line-clamp-2">
-                    {robot.description}
-                 </p>
-
-                 {/* Mini Specs Row */}
-                 <div className="flex items-center gap-4 mb-6 text-xs text-gray-500 bg-black/20 p-3 rounded-xl border border-white/5">
-                    <div className="flex items-center gap-1.5" title="الوزن">
-                        <Weight size={14} className="text-gray-400" />
-                        <span className="font-mono">{robot.specs.weight}</span>
-                    </div>
-                    <div className="w-px h-3 bg-white/10"></div>
-                    <div className="flex items-center gap-1.5" title="البطارية">
-                        <Battery size={14} className="text-green-500" />
-                        <span className="font-mono">{robot.specs.battery}</span>
-                    </div>
-                    <div className="w-px h-3 bg-white/10"></div>
-                    <div className="flex items-center gap-1.5" title="السرعة">
-                        <Move size={14} className="text-blue-500" />
-                        <span className="font-mono">{robot.specs.speed}</span>
-                    </div>
-                 </div>
-
-                 <div className="mt-auto pt-4 border-t border-white/5 flex items-center justify-between">
-                    <div className="flex -space-x-2 space-x-reverse overflow-hidden">
-                        {[1,2,3].map(i => (
-                            <div key={i} className="inline-block h-6 w-6 rounded-full ring-2 ring-[#15191E] bg-white/10 flex items-center justify-center text-[8px] font-bold text-gray-500">
-                                <Cpu size={10} />
-                            </div>
-                        ))}
-                    </div>
-                    <button 
-                        onClick={() => setSelectedProject(robot)}
-                        className="text-xs font-bold text-white hover:text-accent transition flex items-center gap-1 group/link"
-                    >
-                        المزيد
-                        <ArrowRight size={14} className="group-hover/link:-translate-x-1 transition-transform" />
-                    </button>
-                 </div>
-              </div>
-            </div>
+            <ProjectCard key={robot.id} robot={robot} index={idx} onClick={setSelectedProject} />
           ))}
         </div>
 

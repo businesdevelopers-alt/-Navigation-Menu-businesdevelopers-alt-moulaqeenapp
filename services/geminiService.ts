@@ -1,8 +1,5 @@
 import { GoogleGenAI, Type } from "@google/genai";
 
-const apiKey = process.env.API_KEY || '';
-const ai = new GoogleGenAI({ apiKey });
-
 export const translateCommands = async (
   prompt: string,
   context?: {
@@ -12,10 +9,13 @@ export const translateCommands = async (
     gridSize: number;
   }
 ): Promise<string[]> => {
+  const apiKey = process.env.API_KEY;
   if (!apiKey) {
     console.warn("No API Key provided");
     return [];
   }
+
+  const ai = new GoogleGenAI({ apiKey });
 
   try {
     let contextInstruction = "";
@@ -98,7 +98,10 @@ export const streamAssistantHelp = async (
   currentCode?: string, 
   robotState?: any
 ) => {
+  const apiKey = process.env.API_KEY;
   if (!apiKey) throw new Error("API Key not found");
+
+  const ai = new GoogleGenAI({ apiKey });
 
   const systemInstruction = `You are "Mulaqqen AI", a friendly and expert robotics engineer for the Mulaqqen platform.
   Your goal is to help students learn robotics programming, debug their code, and understand hardware concepts.
