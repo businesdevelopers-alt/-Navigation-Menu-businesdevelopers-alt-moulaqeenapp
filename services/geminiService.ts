@@ -34,8 +34,9 @@ export const translateCommands = async (
       `;
     }
 
+    // Using gemini-3-flash-preview for fast command translation as per guidelines
     const response = await ai.models.generateContent({
-      model: "gemini-2.5-flash",
+      model: "gemini-3-flash-preview",
       contents: prompt,
       config: {
         temperature: 0.1, // Highly deterministic for code generation
@@ -130,8 +131,9 @@ export const streamAssistantHelp = async (
   ${JSON.stringify(robotState || {}, null, 2)}
   `;
 
+  // Using gemini-3-pro-preview for complex reasoning and debugging assistance as per guidelines
   return await ai.models.generateContentStream({
-    model: "gemini-2.5-flash",
+    model: "gemini-3-pro-preview",
     contents: query,
     config: {
       systemInstruction: systemInstruction,
