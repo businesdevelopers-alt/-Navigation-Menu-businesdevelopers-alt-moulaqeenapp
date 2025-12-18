@@ -411,8 +411,8 @@ const Store: React.FC = () => {
                  <h3 className="text-2xl font-bold text-white mb-3">لا توجد نتائج مطابقة</h3>
                  <p className="text-gray-400 text-sm max-w-md mx-auto mb-8 leading-relaxed">
                    {searchTerm 
-                     ? `لم يتم العثور على أي منتجات تطابق "${searchTerm}". حاول استخدام كلمات مختلفة.`
-                     : 'لا توجد منتجات توافق الفلاتر المختارة حالياً. حاول تخفيف قيود البحث.'}
+                     ? `عذراً، لم نعثر على أي منتجات تطابق "${searchTerm}". جرب كلمات مفتاحية أخرى.`
+                     : 'لا توجد نتائج توافق الفلاتر الحالية. حاول إزالة بعض الفلاتر لرؤية المزيد من المنتجات.'}
                  </p>
                  <button 
                     onClick={clearFilters} 

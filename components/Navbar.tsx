@@ -92,11 +92,11 @@ const Navbar: React.FC = () => {
                      </Link>
                    </div>
                 ) : (
-                   <Link to="/login" className="text-sm font-bold text-white/70 hover:text-white transition-colors">تسجيل الدخول</Link>
+                   <Link to="/login" className="px-5 py-2.5 rounded-xl border border-white/10 text-white text-sm font-bold hover:bg-white/5 transition-all">تسجيل الدخول</Link>
                 )}
                 
                 {!user && (
-                   <Link to="/register" className="px-5 py-2.5 rounded-xl bg-accent hover:bg-accentHover text-white text-sm font-bold shadow-lg shadow-accent/20 transition-all hover:scale-105 active:scale-95">
+                   <Link to="/register" className="px-5 py-2.5 rounded-xl bg-accent text-white text-sm font-bold hover:bg-accentHover transition-all shadow-lg shadow-accent/20">
                     ابدأ الآن
                    </Link>
                 )}
