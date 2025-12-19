@@ -1,46 +1,53 @@
-import React from 'react';
+import React, { Suspense, lazy } from 'react';
 import { HashRouter as Router, Routes, Route } from 'react-router-dom';
 import Layout from './components/Layout';
-import Home from './pages/Home';
-import Simulator from './pages/Simulator';
-import Store from './pages/Store';
-import About from './pages/About';
-import Support from './pages/Support';
-import Docs from './pages/Docs';
-import Courses from './pages/Courses';
-import Login from './pages/Login';
-import Register from './pages/Register';
-import Profile from './pages/Profile';
-import ProductDetails from './pages/ProductDetails';
-import CourseDetails from './pages/CourseDetails';
-import Blog from './pages/Blog';
-import RobotsGallery from './pages/RobotsGallery';
-import Privacy from './pages/Privacy';
-import Terms from './pages/Terms';
+import Home from './pages/Home'; // Static import for FCP performance
+import LoadingScreen from './components/LoadingScreen';
+
+// Lazy load heavy route components
+const Simulator = lazy(() => import('./pages/Simulator'));
+const Store = lazy(() => import('./pages/Store'));
+const About = lazy(() => import('./pages/About'));
+const Support = lazy(() => import('./pages/Support'));
+const Docs = lazy(() => import('./pages/Docs'));
+const Courses = lazy(() => import('./pages/Courses'));
+const Login = lazy(() => import('./pages/Login'));
+const Register = lazy(() => import('./pages/Register'));
+const Profile = lazy(() => import('./pages/Profile'));
+const ProductDetails = lazy(() => import('./pages/ProductDetails'));
+const CourseDetails = lazy(() => import('./pages/CourseDetails'));
+const Blog = lazy(() => import('./pages/Blog'));
+const RobotsGallery = lazy(() => import('./pages/RobotsGallery'));
+const Privacy = lazy(() => import('./pages/Privacy'));
+const Terms = lazy(() => import('./pages/Terms'));
+const RobotCustomizer = lazy(() => import('./pages/RobotCustomizer'));
 
 const App: React.FC = () => {
   return (
     <Router>
-      <Routes>
-        <Route path="/" element={<Layout />}>
-          <Route index element={<Home />} />
-          <Route path="simulator" element={<Simulator />} />
-          <Route path="courses" element={<Courses />} />
-          <Route path="courses/:id" element={<CourseDetails />} />
-          <Route path="store" element={<Store />} />
-          <Route path="store/product/:id" element={<ProductDetails />} />
-          <Route path="about" element={<About />} />
-          <Route path="blog" element={<Blog />} />
-          <Route path="gallery" element={<RobotsGallery />} />
-          <Route path="support" element={<Support />} />
-          <Route path="docs" element={<Docs />} />
-          <Route path="login" element={<Login />} />
-          <Route path="register" element={<Register />} />
-          <Route path="profile" element={<Profile />} />
-          <Route path="privacy" element={<Privacy />} />
-          <Route path="terms" element={<Terms />} />
-        </Route>
-      </Routes>
+      <Suspense fallback={<LoadingScreen />}>
+        <Routes>
+          <Route path="/" element={<Layout />}>
+            <Route index element={<Home />} />
+            <Route path="simulator" element={<Simulator />} />
+            <Route path="courses" element={<Courses />} />
+            <Route path="courses/:id" element={<CourseDetails />} />
+            <Route path="store" element={<Store />} />
+            <Route path="store/product/:id" element={<ProductDetails />} />
+            <Route path="build" element={<RobotCustomizer />} />
+            <Route path="about" element={<About />} />
+            <Route path="blog" element={<Blog />} />
+            <Route path="gallery" element={<RobotsGallery />} />
+            <Route path="support" element={<Support />} />
+            <Route path="docs" element={<Docs />} />
+            <Route path="login" element={<Login />} />
+            <Route path="register" element={<Register />} />
+            <Route path="profile" element={<Profile />} />
+            <Route path="privacy" element={<Privacy />} />
+            <Route path="terms" element={<Terms />} />
+          </Route>
+        </Routes>
+      </Suspense>
     </Router>
   );
 };

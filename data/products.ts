@@ -1,6 +1,39 @@
+
 import { Product } from '../types';
 
 export const PRODUCTS: Product[] = [
+  { 
+    id: 'rob-01', 
+    name: 'X-Rover Explorer Pro', 
+    category: 'complete', 
+    price: 4500, 
+    status: 'in_stock',
+    description: 'روبوت استكشافي متقدم للدراسات الجيولوجية والبيئية، مزود بنظام تعليق ذكي ودفع سداسي.', 
+    image: 'https://images.unsplash.com/photo-1614728263952-84ea256f9679?auto=format&fit=crop&q=80&w=800',
+    specs: {
+        weight: '12kg',
+        battery: '20,000mAh',
+        speed: '1.5m/s',
+        processor: 'Nvidia Jetson Orin',
+        payload: '5kg'
+    }
+  },
+  { 
+    id: 'rob-02', 
+    name: 'Titan Arm V4', 
+    category: 'complete', 
+    price: 8900, 
+    status: 'pre_order',
+    description: 'ذراع روبوتية صناعية بـ 6 درجات حرية، مصممة للمهام المخبرية الدقيقة والفرز المؤتمت.', 
+    image: 'https://images.unsplash.com/photo-1581092580497-e0d23cbdf1dc?auto=format&fit=crop&q=80&w=800',
+    specs: {
+        weight: '15kg',
+        battery: 'External AC',
+        speed: '2 rad/s',
+        processor: 'PLC / STM32',
+        payload: '2kg'
+    }
+  },
   { 
     id: '1', 
     name: 'طقم روبوت تعليمي (Arduino Kit)', 
@@ -15,7 +48,7 @@ export const PRODUCTS: Product[] = [
     category: 'sensor', 
     price: 45, 
     description: 'وحدة قياس المسافة بالموجات فوق الصوتية HC-SR04، دقة عالية تصل إلى 3 ملم، مثالي لمشاريع تجنب العقبات.', 
-    image: 'https://images.unsplash.com/photo-1555617778-02518510b9fa?auto=format&fit=crop&q=80&w=800' 
+    image: 'https://images.unsplash.com/photo-1557850197-c7b85044af11?auto=format&fit=crop&q=80&w=800' 
   },
   { 
     id: '3', 
@@ -23,7 +56,7 @@ export const PRODUCTS: Product[] = [
     category: 'part', 
     price: 89, 
     description: 'محرك سيرفو SG90 عالي الجودة، دوران 180 درجة، تروس معدنية لتحمل الضغط، مناسب للأذرع الروبوتية.', 
-    image: 'https://images.unsplash.com/photo-1589254065878-42c9da997008?auto=format&fit=crop&q=80&w=800' 
+    image: 'https://images.unsplash.com/photo-159742324403d-112507ee233b?auto=format&fit=crop&q=80&w=800' 
   },
   { 
     id: '4', 
@@ -41,20 +74,18 @@ export const PRODUCTS: Product[] = [
     description: 'كاميرا متوافقة مع ESP32 تدعم التعرف على الوجوه والألوان، دقة 5 ميجابكسل مع عدسة واسعة الزاوية.', 
     image: 'https://images.unsplash.com/photo-1516035069371-29a1b244cc32?auto=format&fit=crop&q=80&w=800' 
   },
-  { 
-    id: '6', 
-    name: 'هيكل روبوت سداسي (Hexapod)', 
-    category: 'part', 
-    price: 320, 
-    description: 'هيكل ميكانيكي لروبوت عنكبوتي، مقطوع بالليزر بدقة عالية، يشمل البراغي والمفاصل اللازمة للتجميع.', 
-    image: 'https://images.unsplash.com/photo-1485827404703-89b55fcc595e?auto=format&fit=crop&q=80&w=800' 
-  },
   {
-    id: '7',
-    name: 'وحدة تحكم مخصصة (Custom PCB)',
-    category: 'part',
-    price: 150,
-    description: 'لوحة تحكم إلكترونية مطبوعة مخصصة للمشاريع المتقدمة، تدعم واي-فاي وبلوتوث مدمج.',
-    image: 'https://images.unsplash.com/photo-1592659762303-90081d34b277?auto=format&fit=crop&q=80&w=800' 
-  },
+    id: 'rob-03',
+    name: 'Advanced Thermal Scanner V2',
+    category: 'sensor',
+    price: 1250,
+    status: 'in_stock',
+    description: 'حساس حراري عالي الدقة للكشف عن البؤر الحرارية ورسم الخرائط الحرارية في البيئات الصناعية المعقدة.',
+    // Missing image to test AI generation fallback
+    specs: {
+        weight: '150g',
+        battery: '3.3V / 5V',
+        processor: 'MLX90640 Core'
+    }
+  }
 ];

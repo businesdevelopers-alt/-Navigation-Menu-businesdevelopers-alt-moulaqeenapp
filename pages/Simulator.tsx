@@ -1,5 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Play, Pause, RotateCcw, Send, Terminal, Battery, Thermometer, Activity, Bot, Sparkles, FileCode, Loader2, Wrench, Cpu, Zap, ArrowUp, ArrowDown, ArrowLeft, ArrowRight, Package, X, Flag, Trophy, AlertTriangle, ChevronsRight, Plus, MessageSquare, HelpCircle, Trash2, Wand2, Copy, LayoutDashboard, MousePointer2, GripHorizontal, Save, Download, Filter, Info, AlertOctagon, User, Settings, ScanEye, Cog } from 'lucide-react';
+import { 
+  Play, Pause, RotateCcw, Send, Terminal, Battery, Thermometer, Activity, 
+  Bot, Sparkles, FileCode, Loader2, Wrench, Cpu, Zap, ArrowUp, ArrowDown, 
+  ArrowLeft, ArrowRight, Package, X, Flag, Trophy, AlertTriangle, 
+  MousePointer2, Save, Download, AlertOctagon, User, ScanEye, Cog, 
+  Wand2, MessageSquare, ShieldAlert, Lightbulb, BookOpen 
+} from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { SimulationEngine } from '../services/simulationEngine';
 import { streamAssistantHelp, translateCommands } from '../services/geminiService';
@@ -77,14 +83,15 @@ const Simulator: React.FC = () => {
 
   // UI State
   const [activeTab, setActiveTab] = useState<'editor' | 'chat' | 'config'>('editor');
-  const [chatMessages, setChatMessages] = useState<{role: 'user' | 'model', text: string}[]>([]);
+  const [chatMessages, setChatMessages] = useState<{role: 'user' | 'model', text: string}[]>([
+    { role: 'model', text: 'أهلاً بك في مختبر مُلَقّن! أنا مساعدك الذكي، كيف يمكنني مساعدتك في بناء وبرمجة روبوتك اليوم؟' }
+  ]);
   const [chatInput, setChatInput] = useState('');
   const [isChatLoading, setIsChatLoading] = useState(false);
   const [isStreaming, setIsStreaming] = useState(false);
   const [aiPrompt, setAiPrompt] = useState('');
   const [isAiGenerating, setIsAiGenerating] = useState(false);
   const [showAiInput, setShowAiInput] = useState(false);
-  const [partsFilter, setPartsFilter] = useState<'all' | 'motor' | 'sensor'>('all');
   const [aiFeedback, setAiFeedback] = useState<string | null>(null);
 
   // Robot Config
@@ -355,7 +362,14 @@ const Simulator: React.FC = () => {
     setIsChatLoading(true);
 
     try {
-        const contextState = { ...robotState, battery: batteryLevel, config: robotConfig };
+        const contextState = { 
+            robotState, 
+            battery: batteryLevel, 
+            config: robotConfig, 
+            gridSize: GRID_SIZE, 
+            target: TARGET_POS, 
+            obstacles: OBSTACLES 
+        };
         const stream = await streamAssistantHelp(textToSend, code, contextState);
         setIsChatLoading(false);
         setIsStreaming(true);
@@ -371,7 +385,12 @@ const Simulator: React.FC = () => {
                 });
             }
         }
-    } catch (error) { setChatMessages(prev => [...prev, { role: 'model', text: "عذراً، حدث خطأ في الاتصال. حاول مرة أخرى." }]); } finally { setIsChatLoading(false); setIsStreaming(false); }
+    } catch (error) { 
+        setChatMessages(prev => [...prev, { role: 'model', text: "عذراً، حدث خطأ في الاتصال. حاول مرة أخرى." }]); 
+    } finally { 
+        setIsChatLoading(false); 
+        setIsStreaming(false); 
+    }
   };
 
   const getActionIcon = (cmd: string) => {
@@ -434,17 +453,15 @@ const Simulator: React.FC = () => {
 
     return (
         <div className="relative flex-1 overflow-hidden flex flex-col">
-            {/* Real Textarea for Editing */}
             <textarea 
                 ref={textareaRef}
                 value={code}
                 onChange={(e) => setCode(e.target.value)}
-                className={`w-full h-full bg-[#0d1117] text-gray-300 p-4 font-mono text-sm resize-none focus:outline-none leading-relaxed custom-scrollbar selection:bg-accent/30 ${showOverlay ? 'opacity-0' : 'opacity-100'}`}
+                className={`w-full h-full bg-[#0d1117] text-gray-300 p-4 font-mono text-sm resize-none focus:outline-none leading-relaxed custom-scrollbar selection:bg-accent/30 ${showOverlay ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}
                 spellCheck={false}
                 disabled={showOverlay}
             />
 
-            {/* Styled Code View with Highlighting Overlay */}
             {showOverlay && (
                 <div className="absolute inset-0 bg-[#0d1117] overflow-y-auto custom-scrollbar p-4 font-mono text-sm leading-relaxed">
                     {lines.map((line, idx) => {
@@ -459,7 +476,7 @@ const Simulator: React.FC = () => {
                                 `}
                             >
                                 <span className="w-8 text-gray-600 text-right pr-3 select-none text-[10px] pt-1">{idx + 1}</span>
-                                <span className={`flex-1 whitespace-pre-wrap ${isActive ? 'text-white' : isFailed ? 'text-red-400' : 'text-gray-400'}`}>
+                                <span className={`flex-1 whitespace-pre-wrap ${isActive ? 'text-white font-bold' : isFailed ? 'text-red-400 font-bold' : 'text-gray-400'}`}>
                                     {line || ' '}
                                 </span>
                                 {isFailed && (
@@ -476,9 +493,6 @@ const Simulator: React.FC = () => {
     );
   };
 
-  /**
-   * Helper to render robot configuration drop zones
-   */
   const renderDropZone = (slot: 'front' | 'back' | 'left' | 'right', label: string, icon: React.ReactNode) => {
     const component = robotConfig.slots[slot];
     const issue = getIssueForLocation(slot);
@@ -520,6 +534,18 @@ const Simulator: React.FC = () => {
       </div>
     );
   };
+
+  const QuickChatAction = ({ icon: Icon, label, prompt, colorClass }: any) => (
+    <button 
+      onClick={() => handleChatSubmit(undefined, prompt)}
+      disabled={isStreaming || isChatLoading}
+      className={`flex items-center gap-2 px-3 py-2 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all border whitespace-nowrap active:scale-95
+        ${colorClass} disabled:opacity-50 disabled:cursor-not-allowed`}
+    >
+      <Icon size={14} />
+      {label}
+    </button>
+  );
 
   return (
     <div className="min-h-screen bg-primary pt-20 pb-6 px-4 font-sans h-screen flex flex-col overflow-hidden">
@@ -573,4 +599,135 @@ const Simulator: React.FC = () => {
               <div className="h-40 bg-black rounded-xl border border-white/10 p-4 font-mono text-xs overflow-y-auto custom-scrollbar">
                  <div className="flex items-center gap-2 text-gray-500 mb-2 border-b border-white/10 pb-2"><Terminal size={14} /><span>System Output</span></div>
                  <div className="space-y-1">
-                    {logs.map((log, i) => (<div key={i} className={`font-medium ${log.includes('CRITICAL') ? 'text-red-500' : log.includes
+                    {logs.map((log, i) => (<div key={i} className={`font-medium ${log.includes('CRITICAL') ? 'text-red-500' : log.includes('AI') ? 'text-purple-400' : 'text-green-400/80'}`}><span className="opacity-50 mr-2">[{new Date().toLocaleTimeString().split(' ')[0]}]</span>{log}</div>))}
+                    <div className="animate-pulse text-accent">_</div>
+                 </div>
+              </div>
+          </div>
+
+          <div className="lg:col-span-5 flex flex-col h-full bg-secondary rounded-xl border border-white/10 overflow-hidden shadow-2xl">
+             <div className="flex border-b border-white/10 bg-black/20">
+                <button onClick={() => setActiveTab('editor')} className={`flex-1 py-4 text-sm font-bold flex items-center justify-center gap-2 transition-all relative ${activeTab === 'editor' ? 'text-white bg-white/5' : 'text-gray-400'}`}><FileCode size={16} />المحرر{activeTab === 'editor' && <div className="absolute bottom-0 left-0 w-full h-0.5 bg-accent"></div>}</button>
+                <button onClick={() => setActiveTab('config')} className={`flex-1 py-4 text-sm font-bold flex items-center justify-center gap-2 transition-all relative ${activeTab === 'config' ? 'text-white bg-white/5' : 'text-gray-400'}`}><Wrench size={16} />التجهيز{activeTab === 'config' && <div className="absolute bottom-0 left-0 w-full h-0.5 bg-accent"></div>}</button>
+                <button onClick={() => setActiveTab('chat')} className={`flex-1 py-4 text-sm font-bold flex items-center justify-center gap-2 transition-all relative ${activeTab === 'chat' ? 'text-white bg-white/5' : 'text-gray-400'}`}><Sparkles size={16} />المساعد{activeTab === 'chat' && <div className="absolute bottom-0 left-0 w-full h-0.5 bg-accent"></div>}</button>
+             </div>
+
+             <div className="flex-1 flex flex-col overflow-hidden relative">
+                {activeTab === 'editor' && (
+                   <>
+                     <div className="bg-[#15191e] border-b border-white/5 p-4 space-y-3">
+                        <div className="flex items-center justify-between"><h3 className="text-xs font-bold text-gray-400 flex items-center gap-1"><MousePointer2 size={12} />إدراج سريع</h3><button onClick={() => setShowAiInput(!showAiInput)} className={`px-2 py-1 rounded-md text-[10px] flex items-center gap-1.5 transition font-bold border ${showAiInput ? 'bg-purple-600 text-white' : 'bg-purple-500/10 text-purple-400 border-purple-500/20'}`}><Sparkles size={10} />{showAiInput ? 'إغلاق AI' : 'AI Assistant'}</button></div>
+                        <div className="grid grid-cols-2 gap-2"><div className="grid grid-cols-2 gap-2"><button onClick={() => insertCommand('FORWARD')} className="px-3 py-2 bg-green-500/10 rounded-lg text-xs font-bold text-green-400 flex items-center justify-center gap-1.5 transition border border-green-500/20"><ArrowUp size={14} />أمام</button><button onClick={() => insertCommand('BACKWARD')} className="px-3 py-2 bg-red-500/10 rounded-lg text-xs font-bold text-red-400 flex items-center justify-center gap-1.5 transition border border-green-500/20"><ArrowDown size={14} />خلف</button></div><div className="grid grid-cols-3 gap-2"><button onClick={() => insertCommand('TURN_RIGHT')} className="px-2 py-2 bg-blue-500/10 rounded-lg text-xs font-bold text-blue-400 transition border border-blue-500/20"><ArrowRight size={14} /></button><button onClick={() => insertCommand('TURN_LEFT')} className="px-2 py-2 bg-blue-500/10 rounded-lg text-xs font-bold text-blue-400 transition border border-blue-500/20"><ArrowLeft size={14} /></button><button onClick={() => insertCommand('WAIT')} className="px-2 py-2 bg-yellow-500/10 rounded-lg text-xs font-bold text-yellow-400 transition border border-blue-500/20"><Pause size={14} /></button></div></div>
+                     </div>
+                     {showAiInput && <div className="p-4 bg-purple-900/10 border-b border-purple-500/20 animate-in slide-in-from-top"><div className="flex items-center gap-2 mb-2 text-xs font-bold text-purple-300"><Bot size={14} /><span>{isRunning ? 'تحكم مباشر' : 'المولد الذكي'}</span></div><form onSubmit={(e) => handleGenerateCode(e)} className="relative"><input type="text" value={aiPrompt} onChange={(e) => setAiPrompt(e.target.value)} placeholder="مثال: وصلني للعلم وتجنب العقبات" className="w-full bg-black/50 border border-purple-500/30 rounded-lg py-3 pr-3 pl-24 text-sm text-white focus:outline-none focus:border-purple-400" /><button type="submit" disabled={isAiGenerating} className="absolute left-1 top-1.5 bottom-1.5 bg-purple-600 text-white px-3 rounded-md transition text-xs font-bold flex items-center gap-1">{isAiGenerating ? <Loader2 size={12} className="animate-spin" /> : <Wand2 size={12} />}{isRunning ? 'تنفيذ' : 'توليد'}</button></form></div>}
+                     
+                     {renderCodeEditor()}
+                     
+                     <div className="p-4 bg-secondary border-t border-white/10 flex items-center gap-3">
+                        {!isRunning || isPaused ? (
+                           <button onClick={handleRun} className="flex-1 bg-green-600 hover:bg-green-500 text-white py-3 rounded-xl font-bold flex items-center justify-center gap-2 transition shadow-lg shadow-green-900/20"><Play size={20} fill="currentColor" />{isPaused ? 'استئناف المهمة' : 'تشغيل الكود'}</button>
+                        ) : (
+                           <button onClick={() => setIsPaused(true)} className="flex-1 bg-yellow-600 hover:bg-yellow-500 text-white py-3 rounded-xl font-bold flex items-center justify-center gap-2 transition"><Pause size={20} fill="currentColor" />إيقاف مؤقت</button>
+                        )}
+                        <button onClick={handleSaveState} className="px-4 py-3 bg-white/5 hover:bg-white/10 text-white rounded-xl border border-white/10 transition"><Save size={20} /></button>
+                        <button onClick={handleLoadState} className="px-4 py-3 bg-white/5 hover:bg-white/10 text-white rounded-xl border border-white/10 transition"><Download size={20} /></button>
+                        <button onClick={handleReset} className="px-4 py-3 bg-white/5 hover:bg-red-500/20 hover:text-red-400 text-gray-400 rounded-xl border border-white/10 transition"><RotateCcw size={20} /></button>
+                     </div>
+                   </>
+                )}
+                {activeTab === 'config' && (
+                   <div className="flex-1 flex flex-col bg-[#15191e] overflow-hidden">
+                       <div className="flex-1 p-6 relative flex flex-col items-center justify-center overflow-y-auto custom-scrollbar">
+                           <div className="relative w-[320px] h-[480px] bg-[#0F1216] border-2 border-white/10 rounded-3xl shadow-2xl p-6 flex flex-col items-center justify-between z-10">
+                               <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-20 h-20 bg-black border border-white/20 rounded-lg flex items-center justify-center z-10 shadow-2xl"><Cpu size={32} className="text-gray-500" /></div>
+                               {renderDropZone('front', 'Front Sensor', <ScanEye size={24} />)}
+                               <div className="flex justify-between w-full relative">{renderDropZone('left', 'Left Motor', <Cog size={24} />)}{renderDropZone('right', 'Right Motor', <Cog size={24} />)}</div>
+                               {renderDropZone('back', 'Rear Module', <Battery size={24} />)}
+                           </div>
+                       </div>
+                       <div className="h-48 bg-black/40 border-t border-white/10 p-4 overflow-y-auto"><div className="flex items-center justify-between mb-3 px-1"><h3 className="text-xs font-bold text-gray-400 flex items-center gap-2"><Package size={14} />المخزون المتوفر</h3></div><div className="grid grid-cols-4 sm:grid-cols-6 gap-3">{AVAILABLE_COMPONENTS.map(comp => (<div key={comp.id} draggable onDragStart={(e) => handleDragStart(e, comp)} className="bg-secondary p-2 rounded-lg border border-white/5 hover:border-white/20 cursor-grab flex flex-col items-center gap-1 transition-all"><div className="p-2 bg-black/30 rounded-full">{comp.type === 'motor' ? <Zap size={16} className="text-yellow-500" /> : comp.type === 'camera' ? <Bot size={16} className="text-blue-500" /> : <Activity size={16} className="text-green-500" />}</div><span className="text-[10px] font-bold text-gray-300 text-center leading-tight line-clamp-2">{comp.name}</span></div>))}</div></div>
+                   </div>
+                )}
+                {activeTab === 'chat' && (
+                    <div className="flex-1 flex flex-col bg-[#0d1117]">
+                        {/* Quick Actions Header */}
+                        <div className="bg-[#1a1f26] border-b border-white/10 p-4 overflow-x-auto scrollbar-hide flex gap-2">
+                             <QuickChatAction 
+                               icon={ShieldAlert} 
+                               label="Check Errors" 
+                               prompt="افحص الكود الخاص بي بحثاً عن أخطاء برمجية أو منطقية قد تؤدي للتصادم أو استهلاك البطارية." 
+                               colorClass="bg-red-500/10 border-red-500/30 text-red-400 hover:bg-red-500/20"
+                             />
+                             <QuickChatAction 
+                               icon={Lightbulb} 
+                               label="Improve Design" 
+                               prompt="بناءً على المكونات الحالية للروبوت في التجهيز، ما هي التحسينات المقترحة للتصميم لزيادة الكفاءة؟" 
+                               colorClass="bg-yellow-500/10 border-yellow-500/30 text-yellow-400 hover:bg-yellow-500/20"
+                             />
+                             <QuickChatAction 
+                               icon={BookOpen} 
+                               label="Explain Commands" 
+                               prompt="اشرح لي الأوامر البرمجية المستخدمة في الكود الخاص بي وكيف تؤثر على حركة الروبوت فيزيائياً." 
+                               colorClass="bg-blue-500/10 border-blue-500/30 text-blue-400 hover:bg-blue-500/20"
+                             />
+                             <QuickChatAction 
+                               icon={ScanEye} 
+                               label="Symbols Guide" 
+                               prompt="اشرح لي رموز المكونات المستخدمة في واجهة التجهيز (مثل Cpu, ScanEye, Cog) وكيف أختار الأنسب لمهمتي." 
+                               colorClass="bg-green-500/10 border-green-500/30 text-green-400 hover:bg-green-500/20"
+                             />
+                        </div>
+
+                        <div className="flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar">
+                             {chatMessages.map((msg, idx) => (
+                               <div key={idx} className={`flex gap-3 ${msg.role === 'user' ? 'flex-row-reverse' : ''} animate-in fade-in`}>
+                                 <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${msg.role === 'user' ? 'bg-white/10 text-gray-300' : 'bg-accent text-white shadow-[0_0_10px_rgba(45,137,229,0.5)]'}`}>
+                                   {msg.role === 'user' ? <User size={16} /> : <Bot size={16} />}
+                                 </div>
+                                 <div className={`p-4 rounded-2xl text-sm max-w-[85%] leading-relaxed border shadow-sm
+                                    ${msg.role === 'user' ? 'bg-accent/10 border-accent/20 text-white' : 'bg-white/5 border-white/10 text-gray-300'}`}>
+                                    {msg.role === 'model' ? renderMessageText(msg.text) : msg.text}
+                                 </div>
+                               </div>
+                             ))}
+                             {(isChatLoading || isStreaming) && chatMessages[chatMessages.length-1]?.role !== 'model' && (
+                               <div className="flex gap-3 animate-pulse">
+                                 <div className="w-8 h-8 rounded-full bg-accent flex items-center justify-center text-white"><Bot size={16} /></div>
+                                 <div className="bg-white/5 p-4 rounded-2xl border border-white/10 flex gap-2 items-center">
+                                    <div className="w-2 h-2 bg-gray-500 rounded-full animate-bounce" />
+                                    <div className="w-2 h-2 bg-gray-500 rounded-full animate-bounce [animation-delay:-0.15s]" />
+                                    <div className="w-2 h-2 bg-gray-500 rounded-full animate-bounce [animation-delay:-0.3s]" />
+                                 </div>
+                               </div>
+                             )}
+                             <div ref={chatEndRef}></div>
+                        </div>
+                        <div className="p-4 border-t border-white/10 bg-black/40">
+                          <form onSubmit={(e) => handleChatSubmit(e)} className="relative flex items-center gap-2 group">
+                             <input 
+                               type="text" 
+                               value={chatInput} 
+                               onChange={(e) => setChatInput(e.target.value)} 
+                               placeholder="اسألني عن التصميم، الكود، أو الرموز..." 
+                               className="flex-1 bg-[#1a1f26] border border-white/10 rounded-xl px-5 py-4 text-sm text-white focus:border-accent focus:outline-none transition-all pr-12" 
+                               disabled={isStreaming || isChatLoading} 
+                             />
+                             <button 
+                               type="submit" 
+                               disabled={!chatInput.trim() || isStreaming || isChatLoading} 
+                               className="absolute right-3 p-2 bg-accent text-white rounded-lg disabled:opacity-50 transition-all hover:scale-105 active:scale-95 shadow-lg shadow-accent/20"
+                             >
+                               {isStreaming ? <Loader2 size={20} className="animate-spin" /> : <Send size={20} />}
+                             </button>
+                          </form>
+                        </div>
+                    </div>
+                )}
+             </div>
+          </div>
+       </div>
+    </div>
+  );
+};
+
+export default Simulator;

@@ -1,6 +1,7 @@
+
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Menu, X, ShoppingBag, LogOut } from 'lucide-react';
+import { Menu, X, ShoppingBag, LogOut, Bot, ChevronLeft } from 'lucide-react';
 import Logo from './Logo';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
@@ -19,8 +20,8 @@ const Navbar: React.FC = () => {
   return (
     <>
       <header className="fixed top-0 inset-x-0 z-50 font-sans">
-        {/* Announcement Bar */}
-        <div className="hidden md:block border-b border-white/10 bg-black/70 backdrop-blur-md">
+        {/* Announcement Bar - Now visible on all screens */}
+        <div className="border-b border-white/10 bg-black/70 backdrop-blur-md">
           <div className="mx-auto max-w-7xl px-4 py-2 flex items-center justify-between text-sm text-white/80">
             <div className="flex items-center gap-2">
               <span className="inline-flex items-center gap-2">
@@ -52,7 +53,7 @@ const Navbar: React.FC = () => {
                 <NavLink to="/" label="الرئيسية" active={location.pathname === '/'} />
                 <NavLink to="/simulator" label="المحاكي" active={location.pathname === '/simulator'} />
                 <NavLink to="/courses" label="الدورات" active={location.pathname.startsWith('/courses')} />
-                <NavLink to="/store" label="المتجر" active={location.pathname.startsWith('/store')} />
+                <NavLink to="/store" label="الروبوتات" active={location.pathname.startsWith('/store')} />
                 <NavLink to="/gallery" label="معرض الأعمال" active={location.pathname === '/gallery'} />
                 <NavLink to="/support" label="الدعم" active={location.pathname === '/support'} />
 
@@ -151,10 +152,27 @@ const Navbar: React.FC = () => {
               </div>
 
               <div className="p-4 space-y-2 overflow-y-auto h-[calc(100%-80px)]">
+                {/* Collapsed Announcement in Mobile Menu */}
+                <div className="mb-4 p-4 rounded-2xl bg-white/[0.03] border border-white/5 flex flex-col gap-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <span className="relative flex h-2 w-2">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                        <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-400"></span>
+                      </span>
+                      <span className="text-xs font-bold text-white/90">حالة النظام: يعمل بنجاح</span>
+                    </div>
+                    <span className="text-[10px] font-mono text-gray-500 uppercase">Ver 2.0</span>
+                  </div>
+                  <Link to="/courses" onClick={() => setIsMobileMenuOpen(false)} className="text-xs text-accent font-bold flex items-center gap-1 hover:underline">
+                    اطّلع على التحديثات الجديدة <ChevronLeft size={12} />
+                  </Link>
+                </div>
+
                 <MobileLink to="/" onClick={() => setIsMobileMenuOpen(false)}>الرئيسية</MobileLink>
                 <MobileLink to="/simulator" onClick={() => setIsMobileMenuOpen(false)}>المحاكي</MobileLink>
                 <MobileLink to="/courses" onClick={() => setIsMobileMenuOpen(false)}>الدورات</MobileLink>
-                <MobileLink to="/store" onClick={() => setIsMobileMenuOpen(false)}>المتجر</MobileLink>
+                <MobileLink to="/store" onClick={() => setIsMobileMenuOpen(false)}>الروبوتات</MobileLink>
                 <MobileLink to="/gallery" onClick={() => setIsMobileMenuOpen(false)}>معرض الأعمال</MobileLink>
                 <MobileLink to="/support" onClick={() => setIsMobileMenuOpen(false)}>الدعم</MobileLink>
 
@@ -197,8 +215,8 @@ const Navbar: React.FC = () => {
         )}
       </header>
 
-      {/* Spacer to prevent content overlap with fixed header */}
-      <div className="h-16 md:h-[calc(4rem+2.25rem)]"></div>
+      {/* Spacer updated to handle announcement bar height on all screens */}
+      <div className="h-[calc(4rem+2.25rem)]"></div>
     </>
   );
 };

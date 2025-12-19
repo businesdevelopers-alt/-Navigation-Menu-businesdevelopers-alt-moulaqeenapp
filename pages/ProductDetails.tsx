@@ -1,264 +1,307 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { PRODUCTS } from '../data/products';
-import { ArrowRight, ShoppingCart, Check, Star, Shield, Truck, RotateCcw, ChevronLeft, ChevronRight } from 'lucide-react';
+import { 
+  ArrowRight, ShoppingCart, Check, Star, Shield, 
+  Truck, RotateCcw, ChevronLeft, ChevronRight, 
+  Cpu, Zap, Activity, ShieldCheck, Download, 
+  Share2, Info, Crosshair, Scan
+} from 'lucide-react';
 import { useCart } from '../context/CartContext';
+import AIProductImage from '../components/AIProductImage';
 
 const ProductDetails: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const product = PRODUCTS.find((p) => p.id === id);
   const { addToCart } = useCart();
 
-  // Gallery State
   const [gallery, setGallery] = useState<string[]>([]);
   const [selectedImage, setSelectedImage] = useState<string>('');
-  
-  // Image Loading
+  const [isHovering, setIsHovering] = useState(false);
+  const [mousePos, setMousePos] = useState({ x: 50, y: 50 });
+  const imgContainerRef = useRef<HTMLDivElement>(null);
+
   useEffect(() => {
     if (product) {
-        // Mock gallery images based on product ID to keep them consistent
-        const images = [
+        const images = product.image ? [
             product.image,
-            `https://picsum.photos/800/800?random=${product.id}-1`,
-            `https://picsum.photos/800/800?random=${product.id}-2`,
-            `https://picsum.photos/800/800?random=${product.id}-3`,
-            `https://picsum.photos/800/800?random=${product.id}-4`,
-            `https://picsum.photos/800/800?random=${product.id}-5`,
-        ];
+            `https://images.unsplash.com/photo-1581092580497-e0d23cbdf1dc?q=80&w=800&auto=format&fit=crop`,
+            `https://images.unsplash.com/photo-1485827404703-89b55fcc595e?q=80&w=800&auto=format&fit=crop`,
+            `https://images.unsplash.com/photo-1546776310-eef45dd6d63c?q=80&w=800&auto=format&fit=crop`
+        ] : [];
         setGallery(images);
-        setSelectedImage(images[0]);
+        setSelectedImage(images[0] || '');
     }
   }, [product]);
-
-  // Zoom Logic
-  const [isHovering, setIsHovering] = useState(false);
-  const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
-  const imgContainerRef = useRef<HTMLDivElement>(null);
 
   const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
     if (!imgContainerRef.current) return;
     const { left, top, width, height } = imgContainerRef.current.getBoundingClientRect();
-    
-    // Calculate percentage position
     let x = ((e.clientX - left) / width) * 100;
     let y = ((e.clientY - top) / height) * 100;
-    
-    // Clamp values
-    x = Math.max(0, Math.min(100, x));
-    y = Math.max(0, Math.min(100, y));
-
     setMousePos({ x, y });
     setIsHovering(true);
   };
 
-  const handleMouseLeave = () => {
-    setIsHovering(false);
-  };
-
-  // Thumbnail Carousel Logic
-  const [scrollIndex, setScrollIndex] = useState(0);
-  const THUMBNAILS_PER_VIEW = 4;
-
-  const nextThumbnails = () => {
-     if (scrollIndex + THUMBNAILS_PER_VIEW < gallery.length) {
-         setScrollIndex(prev => prev + 1);
-     }
-  };
-
-  const prevThumbnails = () => {
-     if (scrollIndex > 0) {
-         setScrollIndex(prev => prev - 1);
-     }
-  };
-
-  if (!product) {
-    return (
-      <div className="min-h-screen bg-primary flex items-center justify-center">
-        <div className="text-center">
-          <h2 className="text-2xl text-white font-bold mb-4">المنتج غير موجود</h2>
-          <Link to="/store" className="text-accent hover:text-white transition flex items-center justify-center gap-2">
-            <ArrowRight size={20} />
-            العودة للمتجر
-          </Link>
-        </div>
-      </div>
-    );
-  }
+  if (!product) return null;
 
   return (
-    <div className="min-h-screen bg-primary py-12">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        
-        {/* Breadcrumb */}
-        <nav className="flex items-center gap-2 text-sm text-gray-400 mb-8">
-          <Link to="/store" className="hover:text-white transition">المتجر</Link>
-          <span>/</span>
-          <span className="text-accent">{product.name}</span>
-        </nav>
+    <div className="min-h-screen bg-primary py-12 selection:bg-accent/30 overflow-x-hidden">
+      {/* Background HUD Decor */}
+      <div className="fixed inset-0 pointer-events-none opacity-[0.03]">
+        <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(circle_at_2px_2px,rgba(255,255,255,0.5)_1px,transparent_0)] bg-[size:30px_30px]"></div>
+      </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
-          {/* Image Gallery */}
-          <div className="space-y-4 select-none">
-            {/* Main Image Viewport */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+        
+        {/* Navigation / Dossier Header */}
+        <div className="flex flex-col md:flex-row items-center justify-between gap-6 mb-12 border-b border-white/5 pb-8">
+           <nav className="flex items-center gap-3 text-[10px] font-mono uppercase tracking-[0.2em] text-gray-500">
+            <Link to="/store" className="hover:text-accent transition">Procurement Hub</Link>
+            <ChevronLeft size={10} className="rotate-180" />
+            <span className="text-white">Dossier ID: {product.id.toUpperCase()}</span>
+          </nav>
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2 px-3 py-1 bg-green-500/10 border border-green-500/20 rounded text-[10px] font-black text-green-400 uppercase tracking-widest">
+               <ShieldCheck size={12} />
+               Inventory: Nominal
+            </div>
+            <div className="flex items-center gap-2 px-3 py-1 bg-white/5 border border-white/10 rounded text-[10px] font-black text-gray-400 uppercase tracking-widest">
+               <Activity size={12} />
+               Tech Version: 4.2.0
+            </div>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-16">
+          {/* Visual Presentation Area */}
+          <div className="lg:col-span-7 space-y-6">
             <div 
                 ref={imgContainerRef}
-                className="aspect-square rounded-2xl overflow-hidden border border-white/10 bg-secondary shadow-2xl relative cursor-crosshair group z-10"
+                className="aspect-square rounded-[2.5rem] overflow-hidden border border-white/10 bg-black relative cursor-crosshair group shadow-2xl"
                 onMouseMove={handleMouseMove}
-                onMouseLeave={handleMouseLeave}
+                onMouseLeave={() => setIsHovering(false)}
             >
-              <img 
+              {/* Technical Grid Overlay */}
+              <div className="absolute inset-0 bg-grid opacity-10 pointer-events-none"></div>
+              
+              <AIProductImage 
                 src={selectedImage || product.image} 
                 alt={product.name} 
-                className="w-full h-full object-cover transition-transform duration-200 ease-out pointer-events-none"
+                description={product.description}
+                className="w-full h-full object-contain p-12 transition-transform duration-200 ease-out pointer-events-none"
                 style={{
                     transformOrigin: `${mousePos.x}% ${mousePos.y}%`,
-                    transform: isHovering ? 'scale(1.5)' : 'scale(1)'
+                    transform: isHovering ? 'scale(1.4)' : 'scale(1)'
                 }}
               />
               
-              {/* Zoom Hint */}
-              {!isHovering && (
-                  <div className="absolute bottom-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none">
-                      <span className="bg-black/60 backdrop-blur-md text-white text-[10px] px-2 py-1 rounded border border-white/10 flex items-center gap-1">
-                          <Check size={10} /> Hover to Zoom
-                      </span>
+              {/* HUD Frame */}
+              <div className="absolute inset-8 border border-white/5 pointer-events-none rounded-2xl">
+                 <div className="absolute top-0 left-0 w-12 h-12 border-t-2 border-l-2 border-accent/40 rounded-tl-2xl"></div>
+                 <div className="absolute bottom-0 right-0 w-12 h-12 border-b-2 border-r-2 border-accent/40 rounded-br-2xl"></div>
+              </div>
+
+              {/* Scanning Line */}
+              <div className="absolute inset-0 bg-gradient-to-b from-transparent via-accent/10 to-transparent h-20 w-full animate-scan pointer-events-none"></div>
+              
+              <div className="absolute bottom-10 left-10 z-20 text-[10px] font-mono text-white/40 leading-tight">
+                X_POS: {Math.round(mousePos.x)}% <br/>
+                Y_POS: {Math.round(mousePos.y)}% <br/>
+                MAG_LEVEL: {isHovering ? '1.4X' : '1.0X'}
+              </div>
+
+              {/* Reticle following mouse */}
+              {isHovering && (
+                  <div 
+                    className="absolute w-12 h-12 border border-accent/60 rounded-full pointer-events-none z-30"
+                    style={{ left: `${mousePos.x}%`, top: `${mousePos.y}%`, transform: 'translate(-50%, -50%)' }}
+                  >
+                    <div className="absolute top-1/2 left-0 w-full h-px bg-accent/40"></div>
+                    <div className="absolute left-1/2 top-0 h-full w-px bg-accent/40"></div>
                   </div>
               )}
             </div>
 
-            {/* Thumbnail Carousel */}
-            <div className="relative group/thumbs">
-                 {/* Prev Button */}
-                 <button 
-                    onClick={prevThumbnails}
-                    disabled={scrollIndex === 0}
-                    className="absolute left-0 top-1/2 -translate-y-1/2 z-20 bg-black/70 hover:bg-accent text-white p-1.5 rounded-r border-y border-r border-white/10 disabled:opacity-0 disabled:pointer-events-none transition-all shadow-lg backdrop-blur-sm transform -translate-x-2 group-hover/thumbs:translate-x-0"
-                 >
-                    <ChevronLeft size={16} />
-                 </button>
-
-                 <div className="overflow-hidden -mx-2 py-1">
-                     <div 
-                        className="flex transition-transform duration-300 ease-out"
-                        style={{ transform: `translateX(-${scrollIndex * (100 / THUMBNAILS_PER_VIEW)}%)` }}
-                     >
-                        {gallery.map((img, idx) => (
-                            <div 
-                                key={idx} 
-                                className="flex-shrink-0 px-2"
-                                style={{ width: `${100 / THUMBNAILS_PER_VIEW}%` }}
-                            >
-                                <div 
-                                    onClick={() => setSelectedImage(img)}
-                                    className={`aspect-square rounded-xl overflow-hidden border cursor-pointer transition-all duration-200 relative
-                                        ${selectedImage === img 
-                                            ? 'border-accent ring-2 ring-accent ring-offset-2 ring-offset-[#0F1216] opacity-100 scale-[0.98]' 
-                                            : 'border-white/10 opacity-60 hover:opacity-100 hover:border-white/30 hover:scale-105'
-                                        }
-                                    `}
-                                >
-                                    <img src={img} alt="" className="w-full h-full object-cover" />
-                                </div>
-                            </div>
-                        ))}
-                     </div>
-                 </div>
-
-                 {/* Next Button */}
-                 <button 
-                    onClick={nextThumbnails}
-                    disabled={scrollIndex + THUMBNAILS_PER_VIEW >= gallery.length}
-                    className="absolute right-0 top-1/2 -translate-y-1/2 z-20 bg-black/70 hover:bg-accent text-white p-1.5 rounded-l border-y border-l border-white/10 disabled:opacity-0 disabled:pointer-events-none transition-all shadow-lg backdrop-blur-sm transform translate-x-2 group-hover/thumbs:translate-x-0"
-                 >
-                    <ChevronRight size={16} />
-                 </button>
+            {/* Technical Thumbnails */}
+            <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-hide">
+                {gallery.length > 0 ? gallery.map((img, idx) => (
+                    <button 
+                        key={idx} 
+                        onClick={() => setSelectedImage(img)}
+                        className={`w-24 h-24 rounded-2xl border-2 transition-all flex-shrink-0 overflow-hidden bg-black/40
+                            ${selectedImage === img ? 'border-accent shadow-[0_0_15px_rgba(45,137,229,0.3)] scale-105' : 'border-white/5 opacity-50 hover:opacity-100'}
+                        `}
+                    >
+                        <img src={img} className="w-full h-full object-cover" alt="" />
+                    </button>
+                )) : (
+                  <div className="text-[10px] font-mono text-gray-600 uppercase tracking-widest p-4 bg-white/5 border border-dashed border-white/10 rounded-2xl w-full text-center">
+                    Additional Views Currently Offline
+                  </div>
+                )}
             </div>
           </div>
 
-          {/* Product Info */}
-          <div className="flex flex-col">
-            <div className="mb-6">
-               <span className="inline-block px-3 py-1 rounded-full bg-white/5 text-accent text-xs font-bold mb-4 border border-white/10">
-                 {product.category === 'kit' ? 'طقم تعليمي' : product.category === 'sensor' ? 'مستشعر إلكتروني' : 'قطعة غيار'}
-               </span>
-               <h1 className="text-4xl font-bold text-white mb-4">{product.name}</h1>
-               <div className="flex items-center gap-4 mb-4">
-                 <div className="flex text-yellow-400">
-                    <Star size={18} fill="currentColor" />
-                    <Star size={18} fill="currentColor" />
-                    <Star size={18} fill="currentColor" />
-                    <Star size={18} fill="currentColor" />
-                    <Star size={18} fill="currentColor" className="text-gray-600" />
+          {/* Data Sheet Area */}
+          <div className="lg:col-span-5 flex flex-col">
+            <div className="mb-10">
+               <div className="flex items-center gap-2 mb-6">
+                 <span className="px-3 py-1 bg-highlight text-black text-[10px] font-black uppercase rounded shadow-lg tracking-wider">Classification: {product.category.toUpperCase()} UNIT</span>
+                 <div className="flex text-highlight gap-0.5 ml-auto">
+                    {[...Array(5)].map((_, i) => <Star key={i} size={14} fill={i < 4 ? "currentColor" : "none"} className={i >= 4 ? "text-gray-800" : ""} />)}
                  </div>
-                 <span className="text-gray-400 text-sm">(24 تقييم)</span>
                </div>
-               <p className="text-gray-300 text-lg leading-relaxed">{product.description}</p>
+
+               <h1 className="text-5xl font-black text-white mb-6 leading-tight tracking-tighter uppercase">{product.name}</h1>
+               <p className="text-gray-400 text-lg leading-relaxed font-light mb-10 border-r-4 border-accent pr-6">
+                  {product.description}
+               </p>
             </div>
 
-            <div className="bg-secondary rounded-xl p-6 border border-white/10 mb-8">
-               <div className="flex items-center justify-between mb-6">
-                  <span className="text-3xl font-bold text-highlight">{product.price} ر.س</span>
-                  <span className="text-green-400 flex items-center gap-1 text-sm">
-                    <Check size={16} />
-                    متوفر في المخزون
-                  </span>
+            {/* Spec Readout Board */}
+            <div className="bg-[#111418] rounded-[2.5rem] p-8 border border-white/10 mb-10 shadow-[inset_0_2px_10px_rgba(0,0,0,0.5)]">
+               <div className="flex items-center justify-between mb-10">
+                  <div className="flex flex-col">
+                     <span className="text-[10px] text-gray-500 font-mono font-bold uppercase mb-2 tracking-[0.2em]">Procurement Value</span>
+                     <div className="flex items-baseline gap-2">
+                        <span className="text-6xl font-black text-highlight font-mono tracking-tighter">{product.price}</span>
+                        <span className="text-sm font-bold text-gray-500 uppercase">sar</span>
+                     </div>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-emerald-500 flex items-center justify-end gap-2 text-[10px] font-black uppercase mb-1">
+                        <Scan size={12} /> Stock Verified
+                    </div>
+                    <div className="text-gray-500 text-[10px] font-mono">EST_LEAD_TIME: 48H</div>
+                  </div>
+               </div>
+
+               {/* Core Specs Grid */}
+               <div className="grid grid-cols-2 gap-4 mb-10">
+                   <div className="bg-primary/50 p-5 rounded-2xl border border-white/5 flex items-center gap-4 transition-colors hover:bg-secondary">
+                      <Zap className="text-blue-400" size={24} />
+                      <div>
+                         <div className="text-[10px] text-gray-500 font-mono uppercase font-bold mb-1">Energy Module</div>
+                         <div className="text-base text-white font-mono font-black">{product.specs?.battery || 'INTERNAL_DC'}</div>
+                      </div>
+                   </div>
+                   <div className="bg-primary/50 p-5 rounded-2xl border border-white/5 flex items-center gap-4 transition-colors hover:bg-secondary">
+                      <Cpu className="text-purple-400" size={24} />
+                      <div>
+                         <div className="text-[10px] text-gray-500 font-mono uppercase font-bold mb-1">Core Logic</div>
+                         <div className="text-base text-white font-mono font-black">{product.specs?.processor || 'ARM_V8_SOC'}</div>
+                      </div>
+                   </div>
                </div>
 
                <div className="flex gap-4">
-                 <div className="flex items-center bg-primary rounded-lg border border-white/10 px-4">
-                    <button className="text-gray-400 hover:text-white text-xl font-bold">-</button>
-                    <span className="mx-4 text-white font-mono">1</span>
-                    <button className="text-gray-400 hover:text-white text-xl font-bold">+</button>
-                 </div>
                  <button 
                     onClick={() => addToCart(product)}
-                    className="flex-1 bg-accent hover:opacity-90 text-white py-3 px-6 rounded-lg font-bold shadow-lg shadow-accent/20 transition flex items-center justify-center gap-2"
+                    className="flex-1 bg-white text-black hover:bg-accent hover:text-white py-6 rounded-2xl font-black text-xl shadow-2xl transition-all active:scale-95 flex items-center justify-center gap-4 border-b-8 border-black/10 group"
                  >
-                    <ShoppingCart size={20} />
-                    أضف للسلة
+                    <Shield size={28} className="transition-transform group-hover:rotate-12" />
+                    AUTHORIZE PROCUREMENT
                  </button>
                </div>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-               <div className="flex flex-col items-center text-center p-4 bg-white/5 rounded-xl border border-white/5 hover:bg-white/10 transition">
-                  <Shield className="text-highlight mb-2" size={24} />
-                  <span className="text-white text-sm font-bold">ضمان سنتين</span>
-                  <span className="text-gray-500 text-xs">على العيوب المصنعية</span>
-               </div>
-               <div className="flex flex-col items-center text-center p-4 bg-white/5 rounded-xl border border-white/5 hover:bg-white/10 transition">
-                  <Truck className="text-highlight mb-2" size={24} />
-                  <span className="text-white text-sm font-bold">شحن سريع</span>
-                  <span className="text-gray-500 text-xs">خلال 3-5 أيام عمل</span>
-               </div>
-               <div className="flex flex-col items-center text-center p-4 bg-white/5 rounded-xl border border-white/5 hover:bg-white/10 transition">
-                  <RotateCcw className="text-highlight mb-2" size={24} />
-                  <span className="text-white text-sm font-bold">استرجاع مجاني</span>
-                  <span className="text-gray-500 text-xs">خلال 14 يوم</span>
-               </div>
+            {/* Industrial Meta Info */}
+            <div className="grid grid-cols-3 gap-8 pt-4">
+                <div className="flex flex-col gap-3">
+                    <div className="flex items-center gap-2 text-white/90 font-black text-[10px] uppercase tracking-widest">
+                        <ShieldCheck size={18} className="text-accent" /> Warranted
+                    </div>
+                    <p className="text-[10px] text-gray-500 leading-relaxed">Multi-Year Coverage on Hardware Degradation</p>
+                </div>
+                <div className="flex flex-col gap-3">
+                    <div className="flex items-center gap-2 text-white/90 font-black text-[10px] uppercase tracking-widest">
+                        <Truck size={18} className="text-accent" /> Logistics
+                    </div>
+                    <p className="text-[10px] text-gray-500 leading-relaxed">Secure Global Transit with Real-Time Telemetry</p>
+                </div>
+                <div className="flex flex-col gap-3">
+                    <div className="flex items-center gap-2 text-white/90 font-black text-[10px] uppercase tracking-widest">
+                        <RotateCcw size={18} className="text-accent" /> Integrity
+                    </div>
+                    <p className="text-[10px] text-gray-500 leading-relaxed">Quality Assurance Certificate Included</p>
+                </div>
             </div>
 
           </div>
         </div>
 
-        {/* Additional Tabs/Info */}
-        <div className="mt-16">
-           <div className="border-b border-white/10 flex gap-8 mb-8 overflow-x-auto">
-              <button className="pb-4 text-accent font-bold border-b-2 border-accent whitespace-nowrap">الوصف التفصيلي</button>
-              <button className="pb-4 text-gray-400 hover:text-white transition whitespace-nowrap">المواصفات التقنية</button>
-              <button className="pb-4 text-gray-400 hover:text-white transition whitespace-nowrap">التقييمات</button>
-           </div>
-           <div className="text-gray-300 leading-relaxed space-y-4">
-              <p>
-                هذا المنتج مصمم خصيصاً للمبتدئين والمحترفين في مجال الروبوتات. يتميز بجودة تصنيع عالية وتوافق تام مع منصات التحكم الشهيرة مثل الاردوينو والرازبري باي.
-              </p>
-              <p>
-                يحتوي الطقم على جميع الأدوات اللازمة للتركيب والتشغيل، بالإضافة إلى دليل مستخدم شامل باللغة العربية والإنجليزية. سواء كنت طالباً أو هاوياً، سيمنحك هذا المنتج تجربة تعليمية ممتعة وعملية.
-              </p>
+        {/* Detailed Data Section */}
+        <div className="mt-32 bg-[#0D1013] rounded-[4rem] border border-white/5 p-12 md:p-20 shadow-2xl relative overflow-hidden">
+           <div className="absolute top-0 left-1/2 -translate-x-1/2 w-64 h-1 bg-accent rounded-b-full"></div>
+           <div className="absolute bottom-0 right-0 w-96 h-96 bg-accent/5 blur-[120px] rounded-full pointer-events-none"></div>
+           
+           <div className="grid lg:grid-cols-2 gap-20">
+              <div className="relative z-10">
+                 <h2 className="text-3xl font-black text-white mb-10 flex items-center gap-4">
+                    <div className="w-2 h-8 bg-accent rounded-full"></div>
+                    TECHNICAL SPECIFICATIONS
+                 </h2>
+                 <div className="space-y-8 text-gray-400 leading-loose text-lg font-light">
+                    <p>
+                        This hardware unit is engineered for mission-critical deployments. Integrated with sub-cycle feedback loops and adaptive torque management, it provides unparalleled reliability for high-stakes robotics operations.
+                    </p>
+                    <p>
+                        Constructed from aerospace-grade polymers and reinforced with carbon fiber struts, the chassis minimizes vibrational interference while maintaining structural rigidity across extreme thermal ranges.
+                    </p>
+                    <div className="flex gap-4 pt-6">
+                        <button className="flex items-center gap-2 px-6 py-3 bg-white/5 rounded-xl border border-white/10 text-xs font-bold text-white hover:bg-white/10 transition-all">
+                            <Download size={14} /> DOWNLOAD DATASHEET
+                        </button>
+                        <button className="flex items-center gap-2 px-6 py-3 bg-white/5 rounded-xl border border-white/10 text-xs font-bold text-white hover:bg-white/10 transition-all">
+                            <Share2 size={14} /> SHARE REPORT
+                        </button>
+                    </div>
+                 </div>
+              </div>
+
+              <div className="bg-black/40 rounded-[2.5rem] p-10 border border-white/10 relative z-10 backdrop-blur-xl">
+                 <h3 className="text-[11px] font-mono font-black text-gray-500 mb-8 uppercase tracking-[0.3em]">Deployment Diagnostics</h3>
+                 <div className="space-y-2">
+                    {[
+                        { label: 'Control Latency', value: '< 1.4ms', status: 'optimal' },
+                        { label: 'Thermal Resistance', value: '-25°C to +90°C', status: 'standard' },
+                        { label: 'Network Throughput', value: '1.2 Gbps', status: 'optimal' },
+                        { label: 'Power Efficiency', value: '94.2%', status: 'optimal' },
+                        { label: 'API Protocols', value: 'gRPC / Websockets', status: 'standard' }
+                    ].map((row, i) => (
+                        <div key={i} className="flex justify-between items-center py-4 border-b border-white/5 last:border-0 group/diag">
+                            <span className="text-[12px] text-gray-500 uppercase font-mono font-bold group-hover/diag:text-gray-300 transition-colors">{row.label}</span>
+                            <div className="flex items-center gap-3">
+                                <span className={`w-1.5 h-1.5 rounded-full ${row.status === 'optimal' ? 'bg-green-500' : 'bg-highlight'}`}></span>
+                                <span className="text-[13px] text-accent font-mono font-black">{row.value}</span>
+                            </div>
+                        </div>
+                    ))}
+                 </div>
+              </div>
            </div>
         </div>
 
       </div>
+
+      <style>{`
+        @keyframes scan {
+            0% { transform: translateY(-100%); }
+            100% { transform: translateY(400%); }
+        }
+        .animate-scan {
+            animation: scan 5s linear infinite;
+        }
+        .scrollbar-hide::-webkit-scrollbar {
+          display: none;
+        }
+        .scrollbar-hide {
+          -ms-overflow-style: none;
+          scrollbar-width: none;
+        }
+      `}</style>
     </div>
   );
 };
