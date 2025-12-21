@@ -1,8 +1,10 @@
+
 import React, { Suspense, lazy } from 'react';
-import { HashRouter as Router, Routes, Route } from 'react-router-dom';
+import { HashRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import Layout from './components/Layout';
 import Home from './pages/Home'; // Static import for FCP performance
 import LoadingScreen from './components/LoadingScreen';
+import { useAuth } from './context/AuthContext';
 
 // Lazy load heavy route components
 const Simulator = lazy(() => import('./pages/Simulator'));
@@ -23,13 +25,21 @@ const Terms = lazy(() => import('./pages/Terms'));
 const RobotCustomizer = lazy(() => import('./pages/RobotCustomizer'));
 
 const App: React.FC = () => {
+  const { user } = useAuth();
+
   return (
     <Router>
       <Suspense fallback={<LoadingScreen />}>
         <Routes>
           <Route path="/" element={<Layout />}>
             <Route index element={<Home />} />
-            <Route path="simulator" element={<Simulator />} />
+            
+            {/* حماية مسار المحاكي: إذا لم يكن هناك مستخدم، يتم التوجيه لصفحة تسجيل الدخول */}
+            <Route 
+              path="simulator" 
+              element={user ? <Simulator /> : <Navigate to="/login" replace />} 
+            />
+
             <Route path="courses" element={<Courses />} />
             <Route path="courses/:id" element={<CourseDetails />} />
             <Route path="store" element={<Store />} />

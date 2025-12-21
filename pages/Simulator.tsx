@@ -1,10 +1,12 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { 
   Play, Pause, RotateCcw, Send, Terminal, Battery, Thermometer, Activity, 
   Bot, Sparkles, FileCode, Loader2, Wrench, Cpu, Zap, ArrowUp, ArrowDown, 
   ArrowLeft, ArrowRight, Package, X, Flag, Trophy, AlertTriangle, 
   MousePointer2, Save, Download, AlertOctagon, User, ScanEye, Cog, 
-  Wand2, MessageSquare, ShieldAlert, Lightbulb, BookOpen 
+  Wand2, MessageSquare, ShieldAlert, Lightbulb, BookOpen, ChevronDown, ChevronUp,
+  PlusCircle, Layout, Power
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { SimulationEngine } from '../services/simulationEngine';
@@ -93,6 +95,10 @@ const Simulator: React.FC = () => {
   const [isAiGenerating, setIsAiGenerating] = useState(false);
   const [showAiInput, setShowAiInput] = useState(false);
   const [aiFeedback, setAiFeedback] = useState<string | null>(null);
+
+  // Robot Config UI State
+  const [isPartsBoxOpen, setIsPartsBoxOpen] = useState(true);
+  const [selectedPartForAssignment, setSelectedPartForAssignment] = useState<ComponentSchema | null>(null);
 
   // Robot Config
   const [robotConfig, setRobotConfig] = useState<RobotSchema>(INITIAL_ROBOT_CONFIG);
@@ -321,8 +327,14 @@ const Simulator: React.FC = () => {
     e.preventDefault();
     const componentId = e.dataTransfer.getData('componentId');
     const component = AVAILABLE_COMPONENTS.find(c => c.id === componentId);
-    if (component) setRobotConfig(prev => ({ ...prev, slots: { ...prev.slots, [slot]: component } }));
+    if (component) assignComponentToSlot(component, slot);
     setDraggedItem(null);
+  };
+
+  const assignComponentToSlot = (component: ComponentSchema, slot: 'front' | 'back' | 'left' | 'right') => {
+    setRobotConfig(prev => ({ ...prev, slots: { ...prev.slots, [slot]: component } }));
+    setSelectedPartForAssignment(null);
+    setLogs(prev => [...prev, `> تم تركيب ${component.name} في منفذ ${slot.toUpperCase()}.`]);
   };
 
   const handleGenerateCode = async (e: React.FormEvent, suggestion?: string) => {
@@ -504,6 +516,7 @@ const Simulator: React.FC = () => {
         className={`relative w-24 h-24 rounded-2xl border-2 border-dashed flex flex-col items-center justify-center transition-all group/slot
           ${component ? 'bg-accent/10 border-accent/40 shadow-[0_0_15px_rgba(45,137,229,0.15)]' : 'bg-black/40 border-white/5 hover:border-white/20 hover:bg-black/60'}
           ${issue?.severity === 'critical' ? 'border-red-500/50' : issue?.severity === 'warning' ? 'border-yellow-500/50' : ''}
+          ${selectedPartForAssignment ? 'border-accent/40 bg-accent/5 scale-105' : ''}
         `}
       >
         {component ? (
@@ -524,6 +537,15 @@ const Simulator: React.FC = () => {
           </>
         )}
         
+        {selectedPartForAssignment && (
+            <button 
+                onClick={() => assignComponentToSlot(selectedPartForAssignment, slot)}
+                className="absolute inset-0 bg-accent/20 backdrop-blur-sm rounded-2xl flex items-center justify-center text-white animate-pulse transition-all hover:bg-accent/40"
+            >
+                <PlusCircle size={32} />
+            </button>
+        )}
+
         {issue && (
            <div className={`absolute -bottom-1 left-1/2 -translate-x-1/2 translate-y-full w-32 p-2 rounded bg-black border text-[8px] z-50 pointer-events-none opacity-0 group-hover/slot:opacity-100 transition-opacity
              ${issue.severity === 'critical' ? 'border-red-500/30 text-red-400' : 'border-yellow-500/30 text-yellow-400'}
@@ -552,20 +574,53 @@ const Simulator: React.FC = () => {
        <div className="max-w-7xl mx-auto w-full h-full grid grid-cols-1 lg:grid-cols-12 gap-6 relative">
           <div className="lg:col-span-7 flex flex-col gap-4 h-full relative z-10">
               <div className="flex items-center justify-between bg-secondary p-4 rounded-xl border border-white/10">
-                 <div className="flex items-center gap-3">
-                    <div className={`p-2 rounded-lg ${isRunning ? 'bg-green-500/10 text-green-400 border border-green-500/20' : 'bg-white/5 text-gray-400 border border-white/5'}`}>
-                        {isRunning ? <Activity className="animate-pulse" size={20} /> : <Activity size={20} />}
+                 <div className="flex items-center gap-6">
+                    <div className="flex items-center gap-3">
+                       <div className={`p-2 rounded-lg ${isRunning ? 'bg-green-500/10 text-green-400 border border-green-500/20' : 'bg-white/5 text-gray-400 border border-white/5'}`}>
+                           {isRunning ? <Activity className="animate-pulse" size={20} /> : <Activity size={20} />}
+                       </div>
+                       <div>
+                           <h2 className="text-white font-bold leading-none mb-1">مهمة: الوصول للعلم</h2>
+                           <div className="flex items-center gap-2">
+                                <span className="text-[10px] text-gray-400 font-mono">X:{robotState.x}, Y:{robotState.y}</span>
+                                <span className={`text-[10px] px-1.5 rounded uppercase font-bold ${isRunning ? 'bg-green-500 text-black' : 'bg-gray-700 text-gray-300'}`}>
+                                   {isRunning ? 'Running' : 'Idle'}
+                                </span>
+                           </div>
+                       </div>
                     </div>
-                    <div>
-                        <h2 className="text-white font-bold leading-none mb-1">مهمة: الوصول للعلم</h2>
-                        <div className="flex items-center gap-2">
-                             <span className="text-[10px] text-gray-400 font-mono">X:{robotState.x}, Y:{robotState.y}</span>
-                             <span className={`text-[10px] px-1.5 rounded uppercase font-bold ${isRunning ? 'bg-green-500 text-black' : 'bg-gray-700 text-gray-300'}`}>
-                                {isRunning ? 'Running' : 'Idle'}
-                             </span>
-                        </div>
+
+                    {/* Simulation Main Control Button */}
+                    <div className="h-10 w-px bg-white/10 hidden md:block"></div>
+                    
+                    <div className="flex items-center gap-2">
+                       <button 
+                         onClick={isRunning && !isPaused ? () => setIsPaused(true) : handleRun}
+                         className={`px-5 py-2.5 rounded-xl transition-all flex items-center gap-3 font-black text-xs uppercase tracking-[0.15em] shadow-xl active:scale-95
+                           ${isRunning && !isPaused 
+                             ? 'bg-yellow-500/10 text-yellow-500 border border-yellow-500/20 hover:bg-yellow-500/20' 
+                             : 'bg-accent text-white border border-accent/20 hover:bg-accentHover hover:shadow-accent/40'
+                           }
+                           ${!isRunning && missionStatus === 'idle' ? 'animate-[pulse_2s_infinite]' : ''}
+                         `}
+                       >
+                         {isRunning && !isPaused ? (
+                           <><Pause size={16} fill="currentColor" /><span>PAUSE</span></>
+                         ) : (
+                           <><Play size={16} fill="currentColor" /><span>START SIMULATION</span></>
+                         )}
+                       </button>
+
+                       <button 
+                         onClick={handleReset}
+                         title="Reset Simulation"
+                         className="p-2.5 bg-white/5 border border-white/10 rounded-xl text-gray-400 hover:text-white hover:bg-white/10 transition-all active:rotate-180 duration-500"
+                       >
+                         <RotateCcw size={18} />
+                       </button>
                     </div>
                  </div>
+
                  <div className="flex gap-4 items-center">
                     <div className="flex gap-4 text-xs font-mono">
                         <div className="flex flex-col bg-black/30 px-3 py-1.5 rounded-lg border border-white/5 min-w-[110px]">
@@ -577,7 +632,10 @@ const Simulator: React.FC = () => {
                                 <div className={`h-full transition-all duration-500 ${batteryLevel < 20 ? 'bg-red-500' : batteryLevel <= 50 ? 'bg-yellow-500' : 'bg-green-500'}`} style={{ width: `${Math.max(0, Math.min(100, batteryLevel))}%` }}></div>
                             </div>
                         </div>
-                        <div className="flex items-center gap-2 bg-black/30 px-3 py-1.5 rounded-lg border border-white/5"><Thermometer size={14} className="text-orange-500" /><span className="text-white">{Math.round(temperature)}°C</span></div>
+                        <div className="flex items-center gap-2 bg-black/30 px-3 py-1.5 rounded-lg border border-white/5 group/stat">
+                          <Thermometer size={14} className="text-orange-500 group-hover:scale-110 transition-transform" />
+                          <span className="text-white">{Math.round(temperature)}°C</span>
+                        </div>
                     </div>
                  </div>
               </div>
@@ -619,6 +677,7 @@ const Simulator: React.FC = () => {
                         <div className="flex items-center justify-between"><h3 className="text-xs font-bold text-gray-400 flex items-center gap-1"><MousePointer2 size={12} />إدراج سريع</h3><button onClick={() => setShowAiInput(!showAiInput)} className={`px-2 py-1 rounded-md text-[10px] flex items-center gap-1.5 transition font-bold border ${showAiInput ? 'bg-purple-600 text-white' : 'bg-purple-500/10 text-purple-400 border-purple-500/20'}`}><Sparkles size={10} />{showAiInput ? 'إغلاق AI' : 'AI Assistant'}</button></div>
                         <div className="grid grid-cols-2 gap-2"><div className="grid grid-cols-2 gap-2"><button onClick={() => insertCommand('FORWARD')} className="px-3 py-2 bg-green-500/10 rounded-lg text-xs font-bold text-green-400 flex items-center justify-center gap-1.5 transition border border-green-500/20"><ArrowUp size={14} />أمام</button><button onClick={() => insertCommand('BACKWARD')} className="px-3 py-2 bg-red-500/10 rounded-lg text-xs font-bold text-red-400 flex items-center justify-center gap-1.5 transition border border-green-500/20"><ArrowDown size={14} />خلف</button></div><div className="grid grid-cols-3 gap-2"><button onClick={() => insertCommand('TURN_RIGHT')} className="px-2 py-2 bg-blue-500/10 rounded-lg text-xs font-bold text-blue-400 transition border border-blue-500/20"><ArrowRight size={14} /></button><button onClick={() => insertCommand('TURN_LEFT')} className="px-2 py-2 bg-blue-500/10 rounded-lg text-xs font-bold text-blue-400 transition border border-blue-500/20"><ArrowLeft size={14} /></button><button onClick={() => insertCommand('WAIT')} className="px-2 py-2 bg-yellow-500/10 rounded-lg text-xs font-bold text-yellow-400 transition border border-blue-500/20"><Pause size={14} /></button></div></div>
                      </div>
+                     {/* Fix: Replaced undefined 'setSearchQuery' with the correct 'setAiPrompt' state setter */}
                      {showAiInput && <div className="p-4 bg-purple-900/10 border-b border-purple-500/20 animate-in slide-in-from-top"><div className="flex items-center gap-2 mb-2 text-xs font-bold text-purple-300"><Bot size={14} /><span>{isRunning ? 'تحكم مباشر' : 'المولد الذكي'}</span></div><form onSubmit={(e) => handleGenerateCode(e)} className="relative"><input type="text" value={aiPrompt} onChange={(e) => setAiPrompt(e.target.value)} placeholder="مثال: وصلني للعلم وتجنب العقبات" className="w-full bg-black/50 border border-purple-500/30 rounded-lg py-3 pr-3 pl-24 text-sm text-white focus:outline-none focus:border-purple-400" /><button type="submit" disabled={isAiGenerating} className="absolute left-1 top-1.5 bottom-1.5 bg-purple-600 text-white px-3 rounded-md transition text-xs font-bold flex items-center gap-1">{isAiGenerating ? <Loader2 size={12} className="animate-spin" /> : <Wand2 size={12} />}{isRunning ? 'تنفيذ' : 'توليد'}</button></form></div>}
                      
                      {renderCodeEditor()}
@@ -639,13 +698,81 @@ const Simulator: React.FC = () => {
                    <div className="flex-1 flex flex-col bg-[#15191e] overflow-hidden">
                        <div className="flex-1 p-6 relative flex flex-col items-center justify-center overflow-y-auto custom-scrollbar">
                            <div className="relative w-[320px] h-[480px] bg-[#0F1216] border-2 border-white/10 rounded-3xl shadow-2xl p-6 flex flex-col items-center justify-between z-10">
-                               <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-20 h-20 bg-black border border-white/20 rounded-lg flex items-center justify-center z-10 shadow-2xl"><Cpu size={32} className="text-gray-500" /></div>
+                               <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-20 h-20 bg-black border border-white/20 rounded-lg flex items-center justify-center z-10 shadow-2xl">
+                                   <Cpu size={32} className="text-gray-500" />
+                               </div>
                                {renderDropZone('front', 'Front Sensor', <ScanEye size={24} />)}
-                               <div className="flex justify-between w-full relative">{renderDropZone('left', 'Left Motor', <Cog size={24} />)}{renderDropZone('right', 'Right Motor', <Cog size={24} />)}</div>
+                               <div className="flex justify-between w-full relative">
+                                   {renderDropZone('left', 'Left Motor', <Cog size={24} />)}
+                                   {renderDropZone('right', 'Right Motor', <Cog size={24} />)}
+                               </div>
                                {renderDropZone('back', 'Rear Module', <Battery size={24} />)}
                            </div>
+
+                           {selectedPartForAssignment && (
+                               <div className="absolute top-4 left-1/2 -translate-x-1/2 z-50 bg-accent text-white px-4 py-2 rounded-full font-bold shadow-2xl animate-bounce flex items-center gap-2">
+                                   <PlusCircle size={16} />
+                                   <span>اختر المنفذ لتركيب {selectedPartForAssignment.name}</span>
+                                   <button onClick={() => setSelectedPartForAssignment(null)} className="ml-2 hover:bg-white/20 rounded-full p-0.5"><X size={14} /></button>
+                               </div>
+                           )}
                        </div>
-                       <div className="h-48 bg-black/40 border-t border-white/10 p-4 overflow-y-auto"><div className="flex items-center justify-between mb-3 px-1"><h3 className="text-xs font-bold text-gray-400 flex items-center gap-2"><Package size={14} />المخزون المتوفر</h3></div><div className="grid grid-cols-4 sm:grid-cols-6 gap-3">{AVAILABLE_COMPONENTS.map(comp => (<div key={comp.id} draggable onDragStart={(e) => handleDragStart(e, comp)} className="bg-secondary p-2 rounded-lg border border-white/5 hover:border-white/20 cursor-grab flex flex-col items-center gap-1 transition-all"><div className="p-2 bg-black/30 rounded-full">{comp.type === 'motor' ? <Zap size={16} className="text-yellow-500" /> : comp.type === 'camera' ? <Bot size={16} className="text-blue-500" /> : <Activity size={16} className="text-green-500" />}</div><span className="text-[10px] font-bold text-gray-300 text-center leading-tight line-clamp-2">{comp.name}</span></div>))}</div></div>
+
+                       {/* Parts Box Section - Collapsible */}
+                       <div className="flex flex-col border-t border-white/10 bg-black/20">
+                           <button 
+                               onClick={() => setIsPartsBoxOpen(!isPartsBoxOpen)}
+                               className="w-full flex items-center justify-between p-4 hover:bg-white/5 transition-colors group"
+                           >
+                               <div className="flex items-center gap-3">
+                                   <div className={`p-1.5 rounded-lg bg-accent/10 text-accent transition-transform duration-300 ${isPartsBoxOpen ? 'rotate-0' : 'rotate-180'}`}>
+                                       <Layout size={16} />
+                                   </div>
+                                   <h3 className="text-xs font-black text-gray-300 uppercase tracking-widest flex items-center gap-2">
+                                       صندوق القطع <span className="text-gray-600">|</span> PARTS BOX
+                                   </h3>
+                               </div>
+                               <div className="flex items-center gap-2">
+                                   <span className="text-[10px] font-bold text-gray-600 bg-white/5 px-2 py-0.5 rounded uppercase tracking-tighter">
+                                       {AVAILABLE_COMPONENTS.length} ITEMS
+                                   </span>
+                                   {isPartsBoxOpen ? <ChevronDown size={16} className="text-gray-600" /> : <ChevronUp size={16} className="text-gray-600" />}
+                               </div>
+                           </button>
+
+                           <div className={`transition-all duration-500 ease-in-out overflow-hidden ${isPartsBoxOpen ? 'h-52 opacity-100' : 'h-0 opacity-0 pointer-events-none'}`}>
+                               <div className="p-4 pt-0 overflow-y-auto custom-scrollbar h-full">
+                                   <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-3 py-2">
+                                       {AVAILABLE_COMPONENTS.map(comp => (
+                                           <div 
+                                               key={comp.id} 
+                                               draggable 
+                                               onDragStart={(e) => handleDragStart(e, comp)}
+                                               onClick={() => setSelectedPartForAssignment(comp)}
+                                               className={`bg-secondary p-3 rounded-2xl border transition-all cursor-pointer flex flex-col items-center gap-2 relative group/item
+                                                   ${selectedPartForAssignment?.id === comp.id ? 'border-accent bg-accent/10 shadow-[0_0_15px_rgba(45,137,229,0.2)]' : 'border-white/5 hover:border-white/20 hover:bg-primary'}
+                                               `}
+                                           >
+                                               <div className={`p-2 rounded-full transition-colors ${comp.type === 'motor' ? 'bg-yellow-500/10 text-yellow-500' : comp.type === 'camera' ? 'bg-blue-500/10 text-blue-500' : 'bg-green-500/10 text-green-500'}`}>
+                                                   {comp.type === 'motor' ? <Zap size={16} /> : comp.type === 'camera' ? <Bot size={16} /> : <Activity size={16} />}
+                                               </div>
+                                               <span className="text-[9px] font-black text-gray-300 text-center leading-tight line-clamp-1 uppercase tracking-tighter">{comp.name}</span>
+                                               
+                                               {/* Visual tooltip on hover */}
+                                               <div className="absolute -top-1 right-1 opacity-0 group-hover/item:opacity-100 transition-opacity">
+                                                   <PlusCircle size={10} className="text-accent" />
+                                               </div>
+                                           </div>
+                                       ))}
+                                   </div>
+                                   <div className="mt-2 text-center">
+                                       <p className="text-[9px] text-gray-600 uppercase font-bold tracking-widest">
+                                           اضغط على القطعة للتعيين السريع أو اسحبها للمنفذ المخصص
+                                       </p>
+                                   </div>
+                               </div>
+                           </div>
+                       </div>
                    </div>
                 )}
                 {activeTab === 'chat' && (

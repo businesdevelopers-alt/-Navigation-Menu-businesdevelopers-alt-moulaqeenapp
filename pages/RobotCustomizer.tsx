@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import RobotBuilder from '../components/RobotBuilder';
 import { RobotConfig } from '../types';
@@ -7,10 +8,16 @@ const INITIAL_CONFIG: RobotConfig = {
     name: 'مكتشف الصحراء v1',
     type: 'rover',
     color: '#2D89E5',
-    sensors: ['ultrasonic', 'infrared', 'gps'],
+    sensors: ['ultrasonic', 'gps'],
+    slots: {
+        core: 'standard_cpu',
+        front: 'ultrasonic',
+        back: null,
+        left: 'dc_geared',
+        right: 'dc_geared'
+    },
     sensorConfig: {
         ultrasonic: { range: 200 },
-        infrared: { sensitivity: 50 },
         gps: { updateRate: '1Hz' }
     }
 };

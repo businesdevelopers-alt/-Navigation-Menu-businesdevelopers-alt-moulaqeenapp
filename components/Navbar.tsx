@@ -20,7 +20,7 @@ const Navbar: React.FC = () => {
   return (
     <>
       <header className="fixed top-0 inset-x-0 z-50 font-sans">
-        {/* Announcement Bar - Now visible on all screens */}
+        {/* Announcement Bar */}
         <div className="border-b border-white/10 bg-black/70 backdrop-blur-md">
           <div className="mx-auto max-w-7xl px-4 py-2 flex items-center justify-between text-sm text-white/80">
             <div className="flex items-center gap-2">
@@ -51,7 +51,8 @@ const Navbar: React.FC = () => {
               {/* Desktop Links */}
               <div className="hidden lg:flex items-center gap-1">
                 <NavLink to="/" label="الرئيسية" active={location.pathname === '/'} />
-                <NavLink to="/simulator" label="المحاكي" active={location.pathname === '/simulator'} />
+                {/* تم تعديل هذا السطر: يظهر المحاكي فقط للمسجلين */}
+                {user && <NavLink to="/simulator" label="المحاكي" active={location.pathname === '/simulator'} />}
                 <NavLink to="/courses" label="الدورات" active={location.pathname.startsWith('/courses')} />
                 <NavLink to="/store" label="الروبوتات" active={location.pathname.startsWith('/store')} />
                 <NavLink to="/gallery" label="معرض الأعمال" active={location.pathname === '/gallery'} />
@@ -170,7 +171,8 @@ const Navbar: React.FC = () => {
                 </div>
 
                 <MobileLink to="/" onClick={() => setIsMobileMenuOpen(false)}>الرئيسية</MobileLink>
-                <MobileLink to="/simulator" onClick={() => setIsMobileMenuOpen(false)}>المحاكي</MobileLink>
+                {/* تم تعديل هذا السطر: يظهر المحاكي فقط للمسجلين */}
+                {user && <MobileLink to="/simulator" onClick={() => setIsMobileMenuOpen(false)}>المحاكي</MobileLink>}
                 <MobileLink to="/courses" onClick={() => setIsMobileMenuOpen(false)}>الدورات</MobileLink>
                 <MobileLink to="/store" onClick={() => setIsMobileMenuOpen(false)}>الروبوتات</MobileLink>
                 <MobileLink to="/gallery" onClick={() => setIsMobileMenuOpen(false)}>معرض الأعمال</MobileLink>

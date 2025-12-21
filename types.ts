@@ -51,6 +51,13 @@ export interface RobotConfig {
   type: 'rover' | 'drone' | 'arm';
   color: string;
   sensors: SensorType[];
+  slots: {
+    core: string | null;      // Processor ID
+    front: SensorType | null; // Sensor ID
+    back: SensorType | null;  // Sensor ID
+    left: string | null;      // Motor ID
+    right: string | null;     // Motor ID
+  };
   sensorConfig: {
     ultrasonic?: { range: number };
     infrared?: { sensitivity: number };
